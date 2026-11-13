@@ -56,5 +56,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh workflow run build-apk.yml --repo "$GITHUB_REPOSITORY" --ref main
-          echo "Full project imported. APK build requested."
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if gh workflow run build-apk.yml --repo "$GITHUB_REPOSITORY" --ref main; then
+              echo "Full project imported. APK build requested."
+              exit 0
+            fi
+            echo "Workflow registration is pending (attempt $attempt); retrying shortly."
+            sleep 5
+          done
+          echo "::error::Source code imported, but build dispatch failed. Open Actions and run Build and release uTernix manually."
+          exit 1
