@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="ut3_store_terminal_tip">Программы можно устанавливать и через терминал. Приложения с ярлыками появятся в библиотеке.</string>
+  <string name="ut3_flathub_title">Приложения Flathub</string>
+  <string name="ut3_flathub_blurb">Подключите Flathub один раз, чтобы устанавливать дополнительные Linux-приложения.</string>
+  <string name="ut3_flathub_note">Первая установка может загрузить объёмные общие библиотеки.</string>
+  <string name="ut3_flathub_retry">Повторить</string>
+  <string name="ut3_flathub_enable">Подключить Flathub</string>
+  <string name="ut3_store_open">Открыть</string>
+  <string name="ut3_store_remove">Удалить</string>
+  <string name="ut3_store_install">Установить</string>
+</resources>

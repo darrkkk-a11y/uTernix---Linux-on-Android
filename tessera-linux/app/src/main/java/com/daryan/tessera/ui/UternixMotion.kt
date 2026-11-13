@@ -3,7 +3,12 @@ package com.daryan.tessera.ui
 
 import android.animation.ValueAnimator
 import android.os.Build
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -14,7 +19,9 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -119,4 +126,24 @@ fun UtKineticTile(
             content = content,
         )
     }
+}
+
+
+/** A restrained status beacon that stops animating when Android animations are disabled. */
+@Composable
+fun UtLiveDot(color: Color) {
+    val opacity = if (utAnimationsEnabled()) {
+        val transition = rememberInfiniteTransition(label = "Linux status")
+        val current by transition.animateFloat(
+            initialValue = 0.45f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1800),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "Status pulse",
+        )
+        current
+    } else 1f
+    Box(Modifier.size(10.dp).background(color.copy(alpha = opacity), CircleShape))
 }

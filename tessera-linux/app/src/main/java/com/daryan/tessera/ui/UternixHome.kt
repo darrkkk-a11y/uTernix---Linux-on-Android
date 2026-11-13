@@ -226,7 +226,7 @@ private fun LinuxStatusCard(
                     )
                     Text(mode, color = UColors.Muted, style = MaterialTheme.typography.bodySmall)
                 }
-                Box(Modifier.size(9.dp).background(tone, CircleShape))
+                UtLiveDot(tone)
             }
             Text(
                 if (ready) stringResource(R.string.ut_ready) else blocker.orEmpty(),

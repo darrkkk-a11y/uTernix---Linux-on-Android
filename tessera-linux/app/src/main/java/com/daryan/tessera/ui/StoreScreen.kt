@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -179,12 +181,6 @@ fun StoreScreen(
                             Spacer(Modifier.height(28.dp))
                         }
                     }
-                    Text(
-                        "${shown.size} apps from ${source.label}",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                    )
                 }
                 items(shown, key = { it.id }) { app ->
                     StoreRow(app, { loadIcon(app) }, installed(app) == true, Modifier.animateItem()) { onOpenApp(app) }
@@ -253,8 +249,7 @@ private fun CommandLineHint() {
             DebIconImage(DebIcon.NavTerminal, size = 36.dp)
             Spacer(Modifier.width(12.dp))
             Text(
-                "Prefer the command line? Open Root shell or Terminal from your apps and install the usual Linux way: " +
-                    "apt install, wget or curl a .deb or an AppImage, pip, and so on. Apps that add a menu entry show up in your apps.",
+                stringResource(R.string.ut3_store_terminal_tip),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -267,7 +262,7 @@ private fun CommandLineHint() {
 private fun SourceSwitch(source: StoreSource, onSource: (StoreSource) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        FilledTonalButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+        FilledTonalButton(onClick = { expanded = true }, modifier = Modifier.widthIn(min = 192.dp, max = 280.dp).height(42.dp)) {
             Text(stringResource(R.string.ut2_store_source, source.label), modifier = Modifier.weight(1f))
             Text("⌄")
         }
@@ -291,25 +286,14 @@ private fun FlathubSetup(job: QueueJob?, onSetUp: () -> Unit) {
         Column(Modifier.padding(24.dp)) {
             DebIconImage(DebIcon.PkgShop, size = 72.dp)
             Spacer(Modifier.height(16.dp))
-            Text("Apps from Flathub", style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.ut3_flathub_title), style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(8.dp))
-            Text(
-                "Optional. Flathub has apps Debian doesn't, often in newer versions, built by their makers. " +
-                    "Setting it up installs flatpak in this Linux system and adds Flathub; it's done once per system.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(Modifier.height(12.dp))
-            listOf(
-                "Only apps built for this phone's processor (arm64) are listed.",
-                "Apps share runtimes; the first app on a runtime downloads it too, often 0.5 to 2 GB.",
-                "uTernix starts the apps itself, with the permissions you give them here, instead of Flatpak's sandbox, which Android can't run.",
-            ).forEach { line ->
-                Row(Modifier.padding(vertical = 3.dp)) {
-                    Text("•", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
-                    Text(line, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Spacer(Modifier.height(20.dp))
+            Text(stringResource(R.string.ut3_flathub_blurb),
+                style = MaterialTheme.typography.bodyMedium, color = UColors.Muted)
+            Spacer(Modifier.height(10.dp))
+            Text(stringResource(R.string.ut3_flathub_note),
+                style = MaterialTheme.typography.bodySmall, color = UColors.Package)
+            Spacer(Modifier.height(18.dp))
             when (val state = job?.state) {
                 is JobState.Queued, is JobState.Running -> {
                     val progress = (state as? JobState.Running)?.progress
@@ -323,8 +307,8 @@ private fun FlathubSetup(job: QueueJob?, onSetUp: () -> Unit) {
                         Text("Setup failed: ${state.message}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.height(8.dp))
                     }
-                    Button(onClick = onSetUp, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                        Text(if (state is JobState.Failed) "Try again" else "Set up Flathub")
+                    Button(onClick = onSetUp, modifier = Modifier.height(42.dp)) {
+                        Text(stringResource(if (state is JobState.Failed) R.string.ut3_flathub_retry else R.string.ut3_flathub_enable))
                     }
                 }
             }
@@ -350,8 +334,9 @@ private fun SearchField(query: String, onChange: (String) -> Unit) {
 
 @Composable
 private fun StoreRow(app: StoreApp, icon: suspend () -> File?, installed: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = MaterialTheme.shapes.large, color = androidx.compose.ui.graphics.Color.Transparent, modifier = modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp)) {
+    UtKineticTile(onClick = onClick, accent = UColors.Package,
+        modifier = modifier.fillMaxWidth().heightIn(min = 76.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp)) {
             val file by produceState<File?>(null, app.id) { value = icon() }
             StoreIcon(file, 52)
             Spacer(Modifier.width(14.dp))
@@ -377,7 +362,8 @@ private fun StoreIcon(file: File?, sizeDp: Int) {
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(sizeDp.dp).utSurface(RoundedCornerShape((sizeDp / 4).dp)),
     ) {
-        if (bmp != null) Image(bmp, null, Modifier.size((sizeDp * 0.85).dp))
+        if (bmp != null) Image(bmp, null, modifier = Modifier.size((sizeDp * 0.85).dp),
+            contentScale = ContentScale.Fit)
         else DebIconImage(DebIcon.PkgPackages, size = (sizeDp * 0.8).dp)
     }
 }
@@ -422,29 +408,27 @@ fun StoreAppSheet(
             Spacer(Modifier.height(24.dp))
 
             if (job != null) {
-                FilledTonalButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                    Text(job.statusText(), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
+                UternixStateLabel(job.statusText(), color = UColors.Info)
             } else if (installed == true) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (onOpen != null) {
-                        Button(onClick = onOpen, modifier = Modifier.weight(1f).height(52.dp)) {
-                            DebIconImage(DebIcon.ActRun, size = 28.dp)
+                        Button(onClick = onOpen, modifier = Modifier.height(42.dp)) {
+                            DebIconImage(DebIcon.ActRun, size = 22.dp)
                             Spacer(Modifier.width(8.dp))
-                            Text("Open")
+                            Text(stringResource(R.string.ut3_store_open))
                         }
                     }
-                    OutlinedButton(onClick = onUninstall, enabled = blocker == null, modifier = Modifier.weight(1f).height(52.dp)) {
-                        Text("Uninstall")
+                    OutlinedButton(onClick = onUninstall, enabled = blocker == null, modifier = Modifier.height(42.dp)) {
+                        Text(stringResource(R.string.ut3_store_remove))
                     }
                 }
             } else {
-                Button(onClick = onInstall, enabled = blocker == null, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                Button(onClick = onInstall, enabled = blocker == null, modifier = Modifier.height(42.dp)) {
                     if (blocker == null) {
-                        DebIconImage(DebIcon.ActInstall, size = 28.dp)
+                        DebIconImage(DebIcon.ActInstall, size = 22.dp)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text(blocker ?: "Install")
+                    Text(blocker ?: stringResource(R.string.ut3_store_install))
                 }
                 if (blocker == null) {
                     Text(

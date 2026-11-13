@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="ut3_store_terminal_tip">Install Linux programs through the terminal too. Applications with menu entries appear in the library.</string>
+  <string name="ut3_flathub_title">Flathub apps</string>
+  <string name="ut3_flathub_blurb">Connect Flathub once to install additional Linux applications.</string>
+  <string name="ut3_flathub_note">The first installation may download large shared runtimes.</string>
+  <string name="ut3_flathub_retry">Retry</string>
+  <string name="ut3_flathub_enable">Connect Flathub</string>
+  <string name="ut3_store_open">Open</string>
+  <string name="ut3_store_remove">Uninstall</string>
+  <string name="ut3_store_install">Install</string>
+</resources>

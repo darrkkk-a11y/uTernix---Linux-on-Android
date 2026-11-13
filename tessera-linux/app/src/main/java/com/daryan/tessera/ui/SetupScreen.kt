@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
@@ -121,7 +122,7 @@ fun SetupScreen(
             UternixPanel {
                 UternixHeading(stringResource(R.string.ut2_setup_engine), mode.short)
                 Box {
-                    FilledTonalButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    FilledTonalButton(onClick = { expanded = true }, modifier = Modifier.widthIn(min = 180.dp, max = 280.dp).height(42.dp)) {
                         Text(mode.short, modifier = Modifier.weight(1f))
                         Text("⌄")
                     }
