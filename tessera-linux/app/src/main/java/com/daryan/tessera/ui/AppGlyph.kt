@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.caverock.androidsvg.SVG
 import com.daryan.tessera.container.PermissionManifest
 import com.daryan.tessera.ui.deb.Deb
+import com.daryan.tessera.ui.deb.DebIcon
 import com.daryan.tessera.ui.deb.debIconForApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -69,7 +71,7 @@ fun rememberFileBitmap(path: String?): ImageBitmap? {
 private fun decodeLinuxIcon(file: File): Bitmap? {
     if (!file.isFile || file.length() !in 1..1_500_000) return null
     val prefix = file.inputStream().use { input ->
-        ByteArray(512).let { buffer -> buffer.copyOf(input.read(buffer).coerceAtLeast(0)) }
+        ByteArray(8192).let { buffer -> buffer.copyOf(input.read(buffer).coerceAtLeast(0)) }
     }.toString(Charsets.UTF_8).trimStart('\uFEFF', ' ', '\n', '\r', '\t')
     val ext = file.extension.lowercase()
     return when {
@@ -142,6 +144,12 @@ fun AppTileFill(app: PermissionManifest, modifier: Modifier = Modifier) {
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(0.82f),
+            )
+        } else if (debIconForApp(app) == DebIcon.NavApplications) {
+            Text(
+                text = app.name.trim().firstOrNull()?.uppercase() ?: "?",
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                color = Color.White,
             )
         } else {
             Image(

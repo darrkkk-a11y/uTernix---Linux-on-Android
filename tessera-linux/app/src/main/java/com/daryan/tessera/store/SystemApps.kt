@@ -42,17 +42,24 @@ class SystemApps {
         val wanted = files.mapNotNull { (_, text) -> runCatching { DesktopEntry.parse(text) }.getOrNull()?.icon }
             // They go into a root shell script: names that could break out of its quotes are skipped.
             .filter { it.isNotBlank() && '\'' !in it && '\n' !in it }.distinct()
-        val script = wanted.joinToString("\n") { icon ->
-            val tries = iconCandidates(icon).joinToString(" ") { "'$rootfs/$it'" }
-            "for c in $tries; do [ -f \"${'$'}c\" ] && echo '$MARK$icon' && base64 \"${'$'}c\" && break; done"
-        }
+        // Each root command has a bounded length. A single command with all theme
+        // candidates can exceed Linux's per-argument limit for large app libraries.
         iconDir.mkdirs()
-        val icons = if (wanted.isEmpty()) emptyMap() else sections(runSu(su, script).orEmpty()).mapNotNull { (icon, lines) ->
-            val bytes = runCatching { android.util.Base64.decode(lines.joinToString(""), android.util.Base64.DEFAULT) }.getOrNull()
-                ?: return@mapNotNull null
-            val file = File(iconDir, icon.replace(Regex("[^A-Za-z0-9._-]"), "_").take(80) + ".png")
-            file.writeBytes(bytes)
-            icon to file.path
+        val icons = wanted.chunked(4).flatMap { batch ->
+            val script = batch.joinToString("\n") { icon ->
+                val tries = iconCandidates(icon).joinToString(" ") { "'$rootfs/$it'" }
+                "for c in $tries; do [ -f \"${'$'}c\" ] && echo '$MARK$icon' && base64 \"${'$'}c\" && break; done"
+            }
+            sections(runSu(su, script).orEmpty()).mapNotNull { (icon, lines) ->
+                val bytes = runCatching {
+                    android.util.Base64.decode(lines.joinToString(""), android.util.Base64.DEFAULT)
+                }.getOrNull() ?: return@mapNotNull null
+                if (bytes.size !in 1..1_500_000) return@mapNotNull null
+                // Source may be an SVG or XPM: AppGlyph detects the format by content.
+                val file = File(iconDir, icon.replace(Regex("[^A-Za-z0-9._-]"), "_").take(80) + ".png")
+                file.writeBytes(bytes)
+                icon to file.path
+            }
         }.toMap()
         publish(files) { icons[it] }
     }
