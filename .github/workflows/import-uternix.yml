@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - uTernix_GitHub_Quick_Publish_MOBILE.zip
+      - .github/workflows/import-uternix.yml
   workflow_dispatch:
 
 permissions:
@@ -14,7 +15,7 @@ permissions:
 
 jobs:
   import:
-    if: github.repository == 'darrkkk-a11y/uTernix---Linux-on-Android' && github.actor == 'darrkkk-a11y'
+    if: github.repository == 'darrkkk-a11y/uTernix---Linux-on-Android'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -42,7 +43,7 @@ jobs:
           test -f "$RUNNER_TEMP/uternix-source/README.md"
           test -d "$RUNNER_TEMP/uternix-source/tessera-linux"
           # Keep Git metadata, replace the temporary bootstrap with the reviewed project.
-          rsync -a --delete --exclude='/.git/' "$RUNNER_TEMP/uternix-source/" "$GITHUB_WORKSPACE/"
+          rsync -a --delete --exclude='/.git/' --exclude='/.github/workflows/' "$RUNNER_TEMP/uternix-source/" "$GITHUB_WORKSPACE/"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
@@ -50,19 +51,8 @@ jobs:
           git commit -m "feat: import complete uTernix Android source"
           git push origin HEAD:main
 
-      - name: Trigger APK build workflow
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Report successful import
         shell: bash
         run: |
-          set -euo pipefail
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if gh workflow run build-apk.yml --repo "$GITHUB_REPOSITORY" --ref main; then
-              echo "Full project imported. APK build requested."
-              exit 0
-            fi
-            echo "Workflow registration is pending (attempt $attempt); retrying shortly."
-            sleep 5
-          done
-          echo "::error::Source code imported, but build dispatch failed. Open Actions and run Build and release uTernix manually."
-          exit 1
+          echo "Source imported without changing .github/workflows."
+          echo "Build workflow is installed separately with a workflow-authorized GitHub connection."
