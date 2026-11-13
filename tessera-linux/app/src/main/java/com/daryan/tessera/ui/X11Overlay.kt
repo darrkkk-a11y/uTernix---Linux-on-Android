@@ -293,7 +293,7 @@ fun X11Overlay(session: RunningSession?, actions: X11Actions) {
                             )
                             Page.SCALE -> SubPage("Scale", onBack = { page = Page.MAIN }) { ScalePage(actions, desktop = session?.app?.desktop == true) }
                             Page.KEYS -> SubPage("Keys", onBack = { page = Page.MAIN }) { KeysPage(actions) }
-                            Page.INPUT -> SubPage("Input mode", onBack = { page = Page.MAIN }) { InputPage(actions) }
+                            Page.INPUT -> SubPage(androidx.compose.ui.res.stringResource(com.daryan.tessera.R.string.ut_input_title), onBack = { page = Page.MAIN }) { InputPage(actions) }
                             Page.CAST -> SubPage("Cast", onBack = { page = Page.MAIN }) { CastPage(actions, ::run) }
                             Page.USB -> SubPage("USB devices", onBack = { page = Page.MAIN }) { UsbPage(session, actions, ::run) }
                         }
@@ -328,7 +328,7 @@ private fun MainPage(
         Tile(LauncherIcons.Mouse, "Middle click") { run { actions.click(MouseButton.MIDDLE) } }
         Tile(LauncherIcons.Keyboard, "Keys") { onPage(Page.KEYS) }
         Tile(LauncherIcons.Gamepad, if (controls) "Hide game controls" else "Game controls") { run { onControls(!controls) } }
-        Tile(LauncherIcons.Mouse, "Input mode") { onPage(Page.INPUT) }
+        Tile(LauncherIcons.Mouse, androidx.compose.ui.res.stringResource(com.daryan.tessera.R.string.ut_input_title)) { onPage(Page.INPUT) }
         Tile(LauncherIcons.Scale, "Scale") { onPage(Page.SCALE) }
         Tile(LauncherIcons.Cast, "Cast") { onPage(Page.CAST) }
         Tile(LauncherIcons.Usb, "USB") { onPage(Page.USB) }
@@ -519,38 +519,79 @@ private fun InputPage(actions: X11Actions) {
  * menu alike. Holds its own copy so a tap shows at once; the settings apply live.
  */
 @Composable
-fun InputChoices(mode: TouchMode, onMode: (TouchMode) -> Unit, longPress: Boolean, onLongPress: (Boolean) -> Unit) {
-    var current by remember { mutableStateOf(mode) }
-    var hold by remember { mutableStateOf(longPress) }
-    TouchMode.entries.forEach { m ->
-        Row(
-            verticalAlignment = Alignment.Top,
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                .clickable { current = m; onMode(m) }.padding(vertical = 8.dp),
-        ) {
-            RadioButton(selected = current == m, onClick = null, modifier = Modifier.padding(top = 2.dp, end = 8.dp))
-            Column {
-                Text(m.label, style = MaterialTheme.typography.titleSmall)
-                Text(m.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+fun InputChoices(
+    mode: TouchMode,
+    onMode: (TouchMode) -> Unit,
+    longPress: Boolean,
+    onLongPress: (Boolean) -> Unit,
+) {
+    var current by remember(mode) { mutableStateOf(mode) }
+    var hold by remember(longPress) { mutableStateOf(longPress) }
+    val c = MaterialTheme.colorScheme
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        TouchMode.entries.forEach { option ->
+            val selected = option == current
+            val label = androidx.compose.ui.res.stringResource(
+                when (option) {
+                    TouchMode.DIRECT -> com.daryan.tessera.R.string.ut_input_direct
+                    TouchMode.TOUCHPAD -> com.daryan.tessera.R.string.ut_input_touchpad
+                    TouchMode.SIMULATED -> com.daryan.tessera.R.string.ut_input_simulated
+                }
+            )
+            val detail = androidx.compose.ui.res.stringResource(
+                when (option) {
+                    TouchMode.DIRECT -> com.daryan.tessera.R.string.ut_input_direct_detail
+                    TouchMode.TOUCHPAD -> com.daryan.tessera.R.string.ut_input_touchpad_detail
+                    TouchMode.SIMULATED -> com.daryan.tessera.R.string.ut_input_simulated_detail
+                }
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (selected) c.primaryContainer else c.surfaceContainerLow)
+                    .clickable {
+                        current = option
+                        onMode(option)
+                    }
+                    .padding(horizontal = 10.dp, vertical = 9.dp),
+            ) {
+                RadioButton(selected = selected, onClick = null, modifier = Modifier.size(40.dp))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(label, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                    Text(detail, style = MaterialTheme.typography.bodySmall,
+                        color = c.onSurfaceVariant, maxLines = 2,
+                        overflow = TextOverflow.Ellipsis)
+                }
             }
         }
-    }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-            .clickable { hold = !hold; onLongPress(hold) }.padding(vertical = 8.dp),
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text("Touch and hold to right-click", style = MaterialTheme.typography.titleSmall)
-            Text(
-                if (current == TouchMode.DIRECT) "In Touchpad and Touchscreen mouse. Direct touch leaves holding to the app."
-                else "Double-tap and hold to drag instead.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        // Direct touch dispatches events to the Linux app. It has no right-click hold gesture.
+        if (current != TouchMode.DIRECT) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(c.surfaceContainerLow)
+                    .clickable {
+                        hold = !hold
+                        onLongPress(hold)
+                    }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(androidx.compose.ui.res.stringResource(com.daryan.tessera.R.string.ut_input_right_click),
+                        style = MaterialTheme.typography.titleSmall)
+                    Text(androidx.compose.ui.res.stringResource(com.daryan.tessera.R.string.ut_input_right_click_detail),
+                        style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
+                }
+                Spacer(Modifier.width(12.dp))
+                androidx.compose.material3.Switch(checked = hold, onCheckedChange = {
+                    hold = it
+                    onLongPress(it)
+                })
+            }
         }
-        Spacer(Modifier.width(8.dp))
-        androidx.compose.material3.Switch(checked = hold, onCheckedChange = { hold = it; onLongPress(it) })
     }
 }
 

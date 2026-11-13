@@ -3,6 +3,7 @@ package com.daryan.tessera.ui
 import com.daryan.tessera.R
 import com.daryan.tessera.container.PermissionManifest
 import com.daryan.tessera.ui.deb.UColors
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,7 +33,7 @@ import androidx.compose.ui.unit.dp
  Surface(onClick=onClick,modifier=modifier.heightIn(min=86.dp),shape=RoundedCornerShape(16.dp),
   color=UColors.Raised,border=BorderStroke(1.dp,UColors.Border)){
   Column(Modifier.padding(14.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(12.dp)){
-   Icon(painterResource(icon),contentDescription=null,tint=UColors.Info,modifier=Modifier.size(24.dp))
+   Image(painterResource(icon),contentDescription=null,modifier=Modifier.size(30.dp))
    Text(label,style=MaterialTheme.typography.labelLarge,color=UColors.Text,maxLines=1,overflow=TextOverflow.Ellipsis)
   }
  }
@@ -94,7 +95,7 @@ import androidx.compose.ui.unit.dp
 @Composable private fun StatusPanel(mode:String,blocker:String?,running:Int,onSetup:()->Unit,modifier:Modifier=Modifier){
  UPanel(modifier) {
   Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
-   Icon(painterResource(R.drawable.ut_device_outline_accent),null,Modifier.size(28.dp),tint=UColors.Accent)
+   Image(painterResource(R.drawable.ut_device_filled_text),null,Modifier.size(32.dp))
    Column {
     Text(stringResource(R.string.ut_linux_status),style=MaterialTheme.typography.titleLarge,color=UColors.Text)
     Text(mode,style=MaterialTheme.typography.bodySmall,color=UColors.Muted)

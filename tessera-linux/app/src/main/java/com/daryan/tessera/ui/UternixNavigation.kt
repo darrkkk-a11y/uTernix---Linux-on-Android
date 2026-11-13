@@ -2,6 +2,7 @@ package com.daryan.tessera.ui
 
 import com.daryan.tessera.R
 import com.daryan.tessera.ui.deb.UColors
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
@@ -38,7 +39,7 @@ private fun Destination.labelRes():Int = when(this){
   Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
     .selectable(selected=selected,onClick=onClick,role=Role.Tab)
     .padding(vertical=7.dp), horizontalAlignment=Alignment.CenterHorizontally){
-    BadgedBox(badge={badge()}){Icon(painterResource(destination.icon.vector),label,Modifier.size(24.dp),tint=color)}
+    BadgedBox(badge={badge()}){Image(painterResource(destination.icon.vector),label,Modifier.size(27.dp))}
     Spacer(Modifier.height(5.dp))
     Text(label,style=MaterialTheme.typography.labelSmall,color=color,maxLines=1,overflow=TextOverflow.Ellipsis)
   }
@@ -46,7 +47,7 @@ private fun Destination.labelRes():Int = when(this){
   Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
    .selectable(selected=selected,onClick=onClick,role=Role.Tab).padding(horizontal=16.dp, vertical=14.dp),
    verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
-   BadgedBox(badge={badge()}){Icon(painterResource(destination.icon.vector),label,Modifier.size(23.dp),tint=color)}
+   BadgedBox(badge={badge()}){Image(painterResource(destination.icon.vector),label,Modifier.size(28.dp))}
    Text(label,style=MaterialTheme.typography.labelLarge,color=color,maxLines=1)
   }
  }

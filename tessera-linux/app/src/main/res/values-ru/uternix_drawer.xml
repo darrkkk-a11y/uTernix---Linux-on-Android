@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="ut_drawer_linux_ready">Linux готов</string>
+<string name="ut_drawer_sessions">Сессий: %1$d</string>
+<string name="ut_drawer_quick">Быстрый доступ</string>
+<string name="ut_drawer_terminal">Терминал</string>
+<string name="ut_drawer_terminal_hint">Командная строка Linux</string>
+<string name="ut_drawer_installs">Установки</string>
+<string name="ut_drawer_active">Активно: %1$d</string>
+<string name="ut_drawer_installs_hint">Операции и история</string>
+<string name="ut_drawer_tools">Инструменты</string>
+<string name="ut_drawer_trackpad">Тачпад для ПК</string>
+<string name="ut_drawer_trackpad_hint">Управление компьютером</string>
+<string name="ut_drawer_display">Экран Linux</string>
+<string name="ut_drawer_display_hint">Разрешение и ориентация</string>
+<string name="ut_drawer_settings">Настройки</string>
+<string name="ut_drawer_settings_hint">Система, программы, оформление</string>
+<string name="ut_drawer_advanced">Дополнительно</string>
+<string name="ut_drawer_root_shell">Терминал администратора</string>
+<string name="ut_drawer_root_hint">Системные команды Linux</string>
+<string name="ut_drawer_shortcut">Создать ярлык</string>
+<string name="ut_drawer_shortcut_hint">Команда как приложение</string>
+<string name="ut_drawer_system_files">Системные файлы</string>
+<string name="ut_drawer_system_files_hint">Конфигурация Linux</string>
+<string name="ut_drawer_diagnostics">Копировать диагностику</string>
+<string name="ut_drawer_diagnostics_hint">Данные для поддержки</string>
+<string name="ut_drawer_intro">Начало работы</string>
+<string name="ut_drawer_about">О uTernix</string>
+</resources>

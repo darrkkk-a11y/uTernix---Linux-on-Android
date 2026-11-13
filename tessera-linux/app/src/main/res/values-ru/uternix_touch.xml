@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="ut_input_title">Управление касанием</string>
+  <string name="ut_input_direct">Прямое касание</string>
+  <string name="ut_input_direct_detail">Касания и прокрутка как на телефоне.</string>
+  <string name="ut_input_touchpad">Тачпад</string>
+  <string name="ut_input_touchpad_detail">Двигайте курсор, касайтесь для щелчка.</string>
+  <string name="ut_input_simulated">Мышь касанием</string>
+  <string name="ut_input_simulated_detail">Касание выполняет щелчок в нужной точке.</string>
+  <string name="ut_input_right_click">Долгое нажатие — правый щелчок</string>
+  <string name="ut_input_right_click_detail">Только в режимах курсора.</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="ut_input_title">Touch control</string>
+  <string name="ut_input_direct">Direct touch</string>
+  <string name="ut_input_direct_detail">Tap and scroll as on your phone.</string>
+  <string name="ut_input_touchpad">Touchpad</string>
+  <string name="ut_input_touchpad_detail">Move the cursor, tap to click.</string>
+  <string name="ut_input_simulated">Mouse by touch</string>
+  <string name="ut_input_simulated_detail">Touch a point to click there.</string>
+  <string name="ut_input_right_click">Long press — right click</string>
+  <string name="ut_input_right_click_detail">Only in pointer modes.</string>
+</resources>

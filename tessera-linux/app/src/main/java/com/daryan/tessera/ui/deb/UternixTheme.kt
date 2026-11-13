@@ -1,5 +1,5 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
-// uTernix — flat dark design system. The original Midnight Glass theme has been retired.
+// uTernix — Spectrum: semantic accent colors on solid matte navy surfaces.
 package com.daryan.tessera.ui.deb
 
 import androidx.compose.foundation.shape.RoundedCornerShape

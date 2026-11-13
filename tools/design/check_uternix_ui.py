@@ -11,7 +11,7 @@ for file in res.rglob('*.xml'):
     try: ET.parse(file); xml_count+=1
     except ET.ParseError as e: errors.append(f'XML {file}: {e}')
 icons=list((res/'drawable').glob('ut_*.xml'))
-if len(icons) != 304: errors.append(f'Expected 304 vector icons, found {len(icons)}')
+if len(icons) != 460: errors.append(f'Expected 460 Spectrum icons, found {len(icons)}')
 for file in icons:
     r=ET.parse(file).getroot()
     if r.tag!='vector': errors.append(f'Not a vector: {file}')

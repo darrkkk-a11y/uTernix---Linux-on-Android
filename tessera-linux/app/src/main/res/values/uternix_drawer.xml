@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="ut_drawer_linux_ready">Linux ready</string>
+<string name="ut_drawer_sessions">%1$d sessions</string>
+<string name="ut_drawer_quick">Quick access</string>
+<string name="ut_drawer_terminal">Terminal</string>
+<string name="ut_drawer_terminal_hint">Linux command line</string>
+<string name="ut_drawer_installs">Installations</string>
+<string name="ut_drawer_active">Active: %1$d</string>
+<string name="ut_drawer_installs_hint">Operations and history</string>
+<string name="ut_drawer_tools">Tools</string>
+<string name="ut_drawer_trackpad">PC trackpad</string>
+<string name="ut_drawer_trackpad_hint">Control a computer</string>
+<string name="ut_drawer_display">Linux display</string>
+<string name="ut_drawer_display_hint">Resolution and orientation</string>
+<string name="ut_drawer_settings">Settings</string>
+<string name="ut_drawer_settings_hint">System, apps and appearance</string>
+<string name="ut_drawer_advanced">Advanced</string>
+<string name="ut_drawer_root_shell">Administrator terminal</string>
+<string name="ut_drawer_root_hint">Linux system commands</string>
+<string name="ut_drawer_shortcut">Create shortcut</string>
+<string name="ut_drawer_shortcut_hint">Launch command as an app</string>
+<string name="ut_drawer_system_files">System files</string>
+<string name="ut_drawer_system_files_hint">Linux configuration</string>
+<string name="ut_drawer_diagnostics">Copy diagnostics</string>
+<string name="ut_drawer_diagnostics_hint">Information for technical support</string>
+<string name="ut_drawer_intro">Getting started</string>
+<string name="ut_drawer_about">About uTernix</string>
+</resources>
