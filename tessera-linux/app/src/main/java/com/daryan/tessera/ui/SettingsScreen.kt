@@ -20,6 +20,7 @@ import android.content.ClipboardManager
 import android.os.Build
 import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size

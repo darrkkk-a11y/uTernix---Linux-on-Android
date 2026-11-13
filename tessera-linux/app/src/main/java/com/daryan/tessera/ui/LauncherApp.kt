@@ -51,12 +51,10 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TopAppBarDefaults
@@ -442,7 +440,7 @@ fun LauncherApp(vm: LauncherViewModel = viewModel()) {
                                 Icon(Icons.Rounded.Search,stringResource(R.string.ut_search))
                             }
                             if(showingAppsGrid) IconButton(onClick={showCategories = true}){
-                                Icon(Icons.Rounded.FilterList,stringResource(R.string.ut_categories))
+                                Icon(Icons.Rounded.Menu,stringResource(R.string.ut_categories))
                             }
                             if(showingAppsGrid) DropdownMenu(expanded=showCategories,onDismissRequest={showCategories=false}){
                                 tabs.forEachIndexed { index, tab ->
