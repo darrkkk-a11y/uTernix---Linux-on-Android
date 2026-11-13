@@ -1,0 +1,189 @@
+name: Build and release uTernix
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: uternix-public-releases
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      TESSERA_APK_URL: https://github.com/daryan044/tessera-linux/releases/download/v0.7.0/tessera-v0.7.0.apk
+    steps:
+      - name: Checkout complete source
+        uses: actions/checkout@v4
+
+      - name: Resolve unique APK version
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='0.8.0'
+          version="${base}-dev.${GITHUB_RUN_NUMBER}.r${GITHUB_RUN_ATTEMPT}"
+          tag="v${version}"
+          code=$((800000 + GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
+          echo "TAG=${tag}" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=${code}" >> "$GITHUB_ENV"
+          echo "Release: ${tag} (versionCode ${code})"
+
+      - name: Select Android signing mode
+        env:
+          RELEASE_KEYSTORE: ${{ secrets.UTERNIX_KEYSTORE_BASE64 }}
+          RELEASE_PASSWORD: ${{ secrets.UTERNIX_KEYSTORE_PASSWORD }}
+          RELEASE_ALIAS: ${{ secrets.UTERNIX_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.UTERNIX_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "$RELEASE_KEYSTORE" && -n "$RELEASE_PASSWORD" && -n "$RELEASE_ALIAS" && -n "$RELEASE_KEY_PASSWORD" ]]; then
+            printf '%s' "$RELEASE_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/uternix-release.jks"
+            chmod 600 "$RUNNER_TEMP/uternix-release.jks"
+            echo "TESSERA_KEYSTORE=$RUNNER_TEMP/uternix-release.jks" >> "$GITHUB_ENV"
+            echo "SIGNING_MODE=release" >> "$GITHUB_ENV"
+            echo 'Stable release signing enabled.'
+          else
+            echo "SIGNING_MODE=debug" >> "$GITHUB_ENV"
+            echo '::warning::No persistent release key. Debug APK is for preview only and may not update previous builds.'
+          fi
+
+      - name: Validate SVG-derived assets and resource references
+        shell: bash
+        run: python3 tools/design/check_uternix_ui.py
+
+      - name: Guest integration tests
+        shell: bash
+        run: python3 -m unittest discover -s deb-launcher/tests -v
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Android command line tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK, NDK, and native tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager --install 'platforms;android-37' 'build-tools;36.0.0' 'ndk;29.0.14206865' 'cmake;3.22.1'
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake ninja-build python3
+
+      - name: Cache Box64 cross-compile outputs
+        id: box64-cache
+        uses: actions/cache@v4
+        with:
+          path: box64-build
+          key: box64-aarch64-v0.4.4-${{ hashFiles('box64-source/CMakeLists.txt', 'box64-source/src/**') }}
+
+      - name: Build Box64 ARM64
+        if: steps.box64-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p box64-build
+          cmake -S box64-source -B box64-build/obj \
+            -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DARM_DYNAREC=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake --build box64-build/obj --parallel 4
+          cp box64-build/obj/box64 box64-build/box64
+          aarch64-linux-gnu-strip box64-build/box64 || true
+
+      - name: Stage native runtime and Linux guest assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output tessera-v0.7.0.apk "$TESSERA_APK_URL"
+          python3 build-tools-local/stage-tessera.py
+          python3 deb-launcher/stage-runtime.py --refresh
+
+      - name: Test and assemble versioned Android APK
+        working-directory: tessera-linux
+        env:
+          TESSERA_KEYSTORE_PASSWORD: ${{ secrets.UTERNIX_KEYSTORE_PASSWORD }}
+          TESSERA_KEY_ALIAS: ${{ secrets.UTERNIX_KEY_ALIAS }}
+          TESSERA_KEY_PASSWORD: ${{ secrets.UTERNIX_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          task=':app:assembleDebug'
+          if [[ "$SIGNING_MODE" == 'release' ]]; then task=':app:assembleRelease'; fi
+          ./gradlew --no-daemon --console=plain --stacktrace \
+            -Puternix.versionCode="$VERSION_CODE" \
+            -Puternix.versionName="$VERSION" \
+            :app:testDebugUnitTest "$task"
+
+      - name: Prepare APK, source archive and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          if [[ "$SIGNING_MODE" == 'release' ]]; then
+            apk='tessera-linux/app/build/outputs/apk/release/app-release.apk'
+            apk_name="uternix-${TAG}-arm64.apk"
+            signing_note='Signed with the persistent project release key.'
+          else
+            apk='tessera-linux/app/build/outputs/apk/debug/app-debug.apk'
+            apk_name="uternix-${TAG}-arm64-debug.apk"
+            signing_note='PREVIEW ONLY. Temporary CI debug key; uninstall previous previews before upgrading.'
+          fi
+          test -s "$apk" || { echo "::error::Compiled APK is missing"; exit 1; }
+          cp "$apk" "dist/$apk_name"
+          git archive --format=tar.gz --prefix="uternix-${TAG}/" \
+            --output="dist/uternix-${TAG}-source.tar.gz" HEAD
+          (cd dist && sha256sum "$apk_name" "uternix-${TAG}-source.tar.gz" > SHA256SUMS.txt)
+          cat > dist/release-notes.md <<EOF
+          ## uTernix ${VERSION}
+
+          Automated development build from commit \`${GITHUB_SHA}\`.
+
+          - Android APK: ${apk_name} (ARM64).
+          - Signing: ${signing_note}
+          - Source: complete source archive for the matching commit, including build scripts and licenses.
+          - SHA-256 checksums for the APK and source archive.
+          - Checks: resource validation, guest tests and Android unit tests passed.
+
+          This is a pre-release. Test on real phone, tablet and DeX before daily use.
+          EOF
+
+      - name: Retain CI build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: uternix-${{ env.TAG }}
+          path: |
+            dist/*.apk
+            dist/*.tar.gz
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: Publish development release only after successful build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            dist/*.apk \
+            "dist/uternix-${TAG}-source.tar.gz" \
+            dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title "uTernix ${VERSION}" \
+            --notes-file dist/release-notes.md \
+            --prerelease --latest=false
