@@ -1,0 +1,60 @@
+name: Import uTernix source (one ZIP)
+run-name: Import full source archive from mobile upload
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - uTernix_GitHub_Quick_Publish.zip
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  import:
+    if: github.repository == 'darrkkk-a11y/uTernix---Linux-on-Android' && github.actor == 'darrkkk-a11y'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify uploaded package
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='uTernix_GitHub_Quick_Publish.zip'
+          test -f "$file" || { echo "::error::Upload $file to the root of the repository first"; exit 1; }
+          echo "dc09594b30502b59ed6abd70f8d652fdf1a1294cbb6f5a4864061f74210dab92  $file" | sha256sum -c -
+          unzip -tq "$file" >/dev/null
+
+      - name: Import all source files from the reviewed Git bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/uternix-import"
+          unzip -qq -j uTernix_GitHub_Quick_Publish.zip uTernix_Git_Import_Latest.bundle -d "$RUNNER_TEMP/uternix-import"
+          git clone --quiet --branch main "$RUNNER_TEMP/uternix-import/uTernix_Git_Import_Latest.bundle" "$RUNNER_TEMP/uternix-source"
+          test -f "$RUNNER_TEMP/uternix-source/.github/workflows/build-apk.yml"
+          test -f "$RUNNER_TEMP/uternix-source/README.md"
+          test -d "$RUNNER_TEMP/uternix-source/tessera-linux"
+          # Keep Git metadata, replace the temporary bootstrap with the reviewed project.
+          rsync -a --delete --exclude='/.git/' "$RUNNER_TEMP/uternix-source/" "$GITHUB_WORKSPACE/"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo '::error::No files imported'; exit 1; }
+          git commit -m "feat: import complete uTernix Android source"
+          git push origin HEAD:main
+
+      - name: Trigger APK build workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run build-apk.yml --repo "$GITHUB_REPOSITORY" --ref main
+          echo "Full project imported. APK build requested."
