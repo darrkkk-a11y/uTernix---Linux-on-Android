@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The page color of Midnight Glass, behind the first frame. -->
+    <color name="deb_abyss">#FF020B19</color>
+</resources>

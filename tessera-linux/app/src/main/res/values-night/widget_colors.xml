@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Midnight: tile body, frost text, bracket blue. -->
+    <color name="widget_surface">#FF071B34</color>
+    <color name="widget_on_surface">#FFE8F1FF</color>
+    <color name="widget_on_surface_variant">#FF9DB4D3</color>
+    <color name="widget_accent">#FF1F8FFF</color>
+    <color name="widget_track">#FF1B3558</color>
+    <color name="widget_rim">#9952CEFF</color>
+</resources>

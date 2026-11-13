@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="ut2_library_title">Applications</string>
+    <string name="ut2_library_count">%1$d installed</string>
+    <string name="ut2_library_search">Search installed applications</string>
+    <string name="ut2_library_more">More actions</string>
+    <string name="ut2_library_done">Done arranging</string>
+    <string name="ut2_library_arrange">Arrange icons</string>
+    <string name="ut2_library_layout">Layout settings</string>
+    <string name="ut2_library_widget">Add widget</string>
+    <string name="ut2_library_shortcut">Shortcut</string>
+    <string name="ut2_library_trackpad">Trackpad</string>
+    <string name="ut2_library_all">All</string>
+    <string name="ut2_library_empty">No applications</string>
+    <string name="ut2_library_no_matches">No matches</string>
+    <string name="ut2_library_install_hint">Install a program from Packages.</string>
+    <string name="ut2_library_retry_search">Try a different search.</string>
+    <string name="ut2_library_category_fallback">Linux application</string>
+    <string name="ut2_library_unfavorite">Remove favorite</string>
+    <string name="ut2_library_favorite">Favorite</string>
+    <string name="ut2_library_unpin">Unpin</string>
+    <string name="ut2_library_pin">Pin</string>
+    <string name="ut2_library_edit">Edit command / shortcut</string>
+    <string name="ut2_library_graphics">Graphics</string>
+    <string name="ut2_library_icon">Customize icon</string>
+    <string name="ut2_library_hide">Hide app</string>
+    <string name="ut2_library_uninstall">Uninstall / remove</string>
+    <string name="ut2_setup_engine">Container engine</string>
+    <string name="ut2_setup_less">Less</string>
+    <string name="ut2_setup_details">Details</string>
+    <string name="ut2_store_source">Source: %1$s</string>
+    <string name="ut2_store_categories">Categories</string>
+    <string name="ut2_store_count">%1$d apps</string>
+    <string name="ut2_queue_title">Install queue</string>
+    <string name="ut2_ui_back">Back</string>
+    <string name="ut2_intro_one_title">Linux apps on Android</string>
+    <string name="ut2_intro_one_body">Your Linux environment, terminal and installed apps in one place. Open GUI programs only when you need a desktop window.</string>
+    <string name="ut2_intro_two_title">Set up Linux once</string>
+    <string name="ut2_intro_two_body">Choose PRoot, chroot or an existing Droidspaces container. PRoot works without root. The System section shows what is ready and what needs setup.</string>
+    <string name="ut2_intro_three_title">Find and install packages</string>
+    <string name="ut2_intro_three_body">Browse Debian and optional Flathub catalogs. Track the installation queue and open installed apps from Applications.</string>
+    <string name="ut2_intro_four_title">Files, sessions and permissions</string>
+    <string name="ut2_intro_four_body">Manage Android and Linux files, inspect running tasks, configure app permissions and launch a terminal. Installing untrusted packages can be risky.</string>
+    <string name="ut2_intro_skip">Skip</string>
+    <string name="ut2_intro_next">Next</string>
+    <string name="ut2_intro_start">Open uTernix</string>
+</resources>

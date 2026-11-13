@@ -1,0 +1,16 @@
+DEB Launcher is a modified build of Tessera 0.7.0, GPL-3.0-or-later:
+https://github.com/daryan044/tessera-linux
+Upstream commit: d5810dc0e6a3b98282f4d0fdf5a4ca21c6a2e355
+
+Modifications include the application ID/label, ARM64 build configuration,
+amd64 package handling, direct Debian metadata reading, safe package staging,
+Box64 dispatch, and an OpenCode 2.2.6 ARM64 adapter.
+The corresponding modified source and build scripts are supplied alongside the
+APK in the DEB Launcher source archive. Tessera's GPL license is included as
+TESSERA-LICENSE.
+
+Box64 0.4.4 is built from https://github.com/ptitSeb/box64, MIT license; see
+BOX64-LICENSE. Termux:X11 and other third-party components have their own
+licenses in the corresponding source archive. Electron, OpenCode CLI and
+node-pty are downloaded separately at installation time and retain their own
+licenses. The user's OpenCode .deb is not included in the APK.

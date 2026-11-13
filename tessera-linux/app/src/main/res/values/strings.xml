@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">uTernix</string>
+    <!-- What Recents calls a Linux window or terminal where the launcher shows the activity's
+         label rather than the task's own "<app> (Linux)" (the Pixel Launcher). -->
+    <string name="linux_window_label">Linux app</string>
+    <string name="linux_terminal_label">Linux terminal</string>
+    <string name="widget_app_label">Linux app</string>
+    <string name="widget_app_description">Start one Linux app</string>
+    <string name="widget_running_label">Running Linux apps</string>
+    <string name="widget_running_description">What\'s open in Linux now</string>
+    <string name="widget_stats_label">Phone and Linux</string>
+    <string name="widget_stats_description">Memory, storage and running Linux apps</string>
+    <string name="widget_command_label">Quick command</string>
+    <string name="widget_command_description">Run one of your uTernix shortcuts</string>
+    <string name="ut_nav_apps">Apps</string>
+    <string name="ut_nav_files">Files</string>
+    <string name="ut_nav_store">Packages</string>
+    <string name="ut_nav_sessions">Sessions</string>
+    <string name="ut_nav_setup">System</string>
+    <string name="ut_search">Search apps</string>
+    <string name="ut_menu">Menu</string>
+    <string name="ut_all_apps">All apps</string>
+    <string name="ut_categories">App categories</string>
+    <string name="ut_search_hint">Search installed apps</string>
+    <string name="ut_empty_search">No apps found</string>
+    <string name="ut_home_title">Home</string>
+    <string name="ut_recent_apps">Recent apps</string>
+    <string name="ut_no_apps">Installed apps will appear here.</string>
+    <string name="ut_installs">Install queue</string>
+    <string name="ut_linux_status">Linux system</string>
+    <string name="ut_ready">Container ready</string>
+    <string name="ut_running">running sessions</string>
+    <string name="ut_manage_linux">Manage Linux</string>
+    <string name="ut_setup_linux">Set up Linux</string>
+    <string name="ut_quick_actions">Quick actions</string>
+    <string name="ut_terminal">Terminal</string>
+</resources>

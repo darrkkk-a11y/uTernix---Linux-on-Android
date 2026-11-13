@@ -1,0 +1,30 @@
+#!/bin/sh
+# OpenCode 2.2.6 adapted from the selected package for ARM64 Linux.
+set -eu
+app=${DEB_LAUNCHER_OPENCODE_DIR:-/opt/deb-launcher/apps/opencode-2.2.6}
+[ -x "$app/ai.opencode" ] && [ -x "$app/resources/opencode-cli" ] || {
+    printf '%s\n' 'The adapted OpenCode installation is incomplete.' >&2; exit 1;
+}
+umask 077
+# Do not overwrite another OpenCode installation's configuration or service.
+export XDG_CONFIG_HOME="$HOME/.config/deb-launcher-opencode"
+export XDG_CACHE_HOME="$HOME/.cache/deb-launcher-opencode"
+export XDG_DATA_HOME="$HOME/.local/share/deb-launcher-opencode"
+export XDG_STATE_HOME="$HOME/.local/state/deb-launcher-opencode"
+mkdir -p "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME"
+if [ ! -e "$XDG_CONFIG_HOME/opencode/service.json" ]; then
+    port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')
+    "$app/resources/opencode-cli" service set port "$port" >/dev/null
+fi
+export LD_LIBRARY_PATH="$app${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# Box64 compatibility settings for complex x86-64 Electron apps (Grok Bot, Cursor, VS Code).
+# BOX64_DYNAREC=0 disables dynamic recompiler — slower but more compatible.
+# BOX64_NOPIE=1 avoids PIE issues under emulation.
+# BOX64_NOSANDBOX=1 disables Chromium sandbox — some apps crash without it.
+# BOX64_LD_LIBRARY_PATH points Box64 to the bundled x86-64 libraries.
+export BOX64_DYNAREC=${BOX64_DYNAREC:-0}
+export BOX64_NOPIE=${BOX64_NOPIE:-1}
+export BOX64_NOSANDBOX=${BOX64_NOSANDBOX:-1}
+export BOX64_LD_LIBRARY_PATH="/opt/deb-launcher/box64-0.4.4-v2/libs${BOX64_LD_LIBRARY_PATH:+:$BOX64_LD_LIBRARY_PATH}"
+# Open Electron in fullscreen and force a dark theme by default.
+exec "$app/ai.opencode" --start-maximized --enable-features=AutoDarkMode --force-dark-mode "$@"

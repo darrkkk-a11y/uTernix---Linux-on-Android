@@ -1,0 +1,41 @@
+#!/bin/sh
+# Run as the guest's emulated root, never on the Android host. APT can execute
+# package maintainer scripts; only install packages the user explicitly chose.
+set -eu
+if [ "$#" -ne 1 ]; then
+    printf '%s\n' 'Expected one staged .deb path' >&2
+    exit 2
+fi
+stage=${DEB_LAUNCHER_STAGING:-/var/tmp/tessera-debs}
+deb=$1
+case "$deb" in
+    "$stage"/*) base=${deb#"$stage"/} ;;
+    *) printf '%s\n' 'Package is outside the staging directory' >&2; exit 2 ;;
+esac
+case "$base" in
+    ''|*/*|.|..|*.deb/..) printf '%s\n' 'Invalid staged package name' >&2; exit 2 ;;
+    *.deb) ;;
+    *) printf '%s\n' 'Expected a .deb file' >&2; exit 2 ;;
+esac
+[ -f "$deb" ] || { printf '%s\n' 'Staged package is missing' >&2; exit 1; }
+[ "$(dpkg --print-architecture)" = arm64 ] || {
+    printf '%s\n' 'This installer requires an ARM64 Debian guest' >&2; exit 1;
+}
+[ "$(dpkg-deb -f "$deb" Architecture)" = amd64 ] || {
+    printf '%s\n' 'This installer only handles amd64 packages' >&2; exit 1;
+}
+# This exact OpenCode build has a tested ARM64 adaptation. Do not pretend the
+# x86-64 Electron/CLI are known to work under Box64 when they are not.
+if [ "$(dpkg-deb -f "$deb" Package)" = opencode ] &&
+   [ "$(dpkg-deb -f "$deb" Version)" = 2.2.6 ] &&
+   [ "$(sha256sum "$deb" | cut -d ' ' -f 1)" = 87f66555f3a3fec3901ef7e1ac86f5e2deb55b90004cf42396e7547c6b195459 ]; then
+    runtime=${DEB_LAUNCHER_RUNTIME_DIR:-/opt/deb-launcher/box64-0.4.4-v2}
+    exec /bin/sh "$runtime/install-opencode-arm64" "$deb"
+fi
+export DEBIAN_FRONTEND=noninteractive
+if ! dpkg --print-foreign-architectures | grep -Fxq amd64; then
+    dpkg --add-architecture amd64
+fi
+apt-get update
+# Never silently remove existing packages to make a foreign package fit.
+apt-get install -y --no-install-recommends --no-remove "$deb"

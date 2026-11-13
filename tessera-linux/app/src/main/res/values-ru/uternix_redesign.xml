@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="ut2_library_title">Приложения</string>
+    <string name="ut2_library_count">Установлено: %1$d</string>
+    <string name="ut2_library_search">Поиск установленных приложений</string>
+    <string name="ut2_library_more">Действия</string>
+    <string name="ut2_library_done">Завершить настройку</string>
+    <string name="ut2_library_arrange">Изменить порядок</string>
+    <string name="ut2_library_layout">Настройки рабочего стола</string>
+    <string name="ut2_library_widget">Добавить виджет</string>
+    <string name="ut2_library_shortcut">Ярлык</string>
+    <string name="ut2_library_trackpad">Тачпад</string>
+    <string name="ut2_library_all">Все</string>
+    <string name="ut2_library_empty">Нет приложений</string>
+    <string name="ut2_library_no_matches">Ничего не найдено</string>
+    <string name="ut2_library_install_hint">Установите программу из раздела «Пакеты».</string>
+    <string name="ut2_library_retry_search">Измените поисковый запрос.</string>
+    <string name="ut2_library_category_fallback">Приложение Linux</string>
+    <string name="ut2_library_unfavorite">Убрать из избранного</string>
+    <string name="ut2_library_favorite">В избранное</string>
+    <string name="ut2_library_unpin">Открепить</string>
+    <string name="ut2_library_pin">Закрепить</string>
+    <string name="ut2_library_edit">Изменить команду или ярлык</string>
+    <string name="ut2_library_graphics">Графика</string>
+    <string name="ut2_library_icon">Изменить значок</string>
+    <string name="ut2_library_hide">Скрыть приложение</string>
+    <string name="ut2_library_uninstall">Удалить приложение или ярлык</string>
+    <string name="ut2_setup_engine">Движок контейнера</string>
+    <string name="ut2_setup_less">Свернуть</string>
+    <string name="ut2_setup_details">Подробнее</string>
+    <string name="ut2_store_source">Источник: %1$s</string>
+    <string name="ut2_store_categories">Категории</string>
+    <string name="ut2_store_count">Приложений: %1$d</string>
+    <string name="ut2_queue_title">Очередь установок</string>
+    <string name="ut2_ui_back">Назад</string>
+    <string name="ut2_intro_one_title">Linux-приложения на Android</string>
+    <string name="ut2_intro_one_body">Контейнер Linux, терминал и установленные приложения в одном интерфейсе. Графический рабочий стол запускается только при необходимости.</string>
+    <string name="ut2_intro_two_title">Один раз настройте Linux</string>
+    <string name="ut2_intro_two_body">Выберите PRoot, chroot или существующий контейнер Droidspaces. PRoot работает без root. Раздел «Система» покажет, что уже готово.</string>
+    <string name="ut2_intro_three_title">Устанавливайте пакеты</string>
+    <string name="ut2_intro_three_body">Используйте каталог Debian или Flathub. Ход установки виден в очереди, а готовые программы появятся в разделе приложений.</string>
+    <string name="ut2_intro_four_title">Файлы, сессии и разрешения</string>
+    <string name="ut2_intro_four_body">Управляйте файлами Android и Linux, следите за процессами, задавайте разрешения и открывайте терминал. Устанавливайте только доверенные пакеты.</string>
+    <string name="ut2_intro_skip">Пропустить</string>
+    <string name="ut2_intro_next">Далее</string>
+    <string name="ut2_intro_start">Открыть uTernix</string>
+</resources>

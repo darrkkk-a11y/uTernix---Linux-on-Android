@@ -1,0 +1,1043 @@
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+
+// Copyright (C) 2026 Daryan Kamaran Karim
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+package com.daryan.tessera.ui
+
+import com.daryan.tessera.ui.deb.DebIcon
+import com.daryan.tessera.ui.deb.UtBackdrop
+import com.daryan.tessera.ui.deb.DebIconImage
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material3.Badge
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberSearchBarState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.daryan.tessera.R
+import com.daryan.tessera.ui.deb.UColors
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.daryan.tessera.BackendMode
+import com.daryan.tessera.LauncherViewModel
+import com.daryan.tessera.TerminalActivity
+import com.daryan.tessera.container.ConfigFile
+import com.daryan.tessera.store.CatalogState
+import com.daryan.tessera.store.StoreApp
+import com.daryan.tessera.store.StoreSource
+import com.daryan.tessera.container.PermissionManifest
+import com.daryan.tessera.Shortcut
+import com.daryan.tessera.store.SystemApps
+import kotlinx.coroutines.launch
+
+/** What's waiting on the user: [app] should open [args], and session [sessionId] already runs it. */
+private class AlreadyOpen(val app: PermissionManifest, val args: List<String>, val sessionId: String)
+
+enum class Destination(val label: String, val title: String, val icon: DebIcon) {
+    Apps("Apps", "Linux", DebIcon.NavApplications),
+    Files("Files", "Files", DebIcon.NavFiles),
+    Store("Store", "Store", DebIcon.NavStore),
+    Sessions("Sessions", "Sessions", DebIcon.NavSessions),
+    Setup("Setup", "Setup", DebIcon.NavSettings),
+}
+
+@Composable
+fun LauncherApp(vm: LauncherViewModel = viewModel()) {
+    val introSeen by vm.introSeen.collectAsStateWithLifecycle()
+    // Before anything else on a first run: the launcher behind it has nothing in it yet.
+    if (!introSeen) {
+        IntroScreen(onDone = { vm.setIntroSeen(true) })
+        return
+    }
+    val status by vm.status.collectAsStateWithLifecycle()
+    val mode by vm.mode.collectAsStateWithLifecycle()
+    val customTabs by vm.tabStore.tabs.collectAsStateWithLifecycle()
+    val sessions by vm.sessions.sessions.collectAsStateWithLifecycle()
+    val install by vm.installState.collectAsStateWithLifecycle()
+    val removingLinux by vm.removingLinux.collectAsStateWithLifecycle()
+    val containerBusy by vm.containerBusy.collectAsStateWithLifecycle()
+    val apps by vm.apps.collectAsStateWithLifecycle()
+    // Apps installed from a terminal while the launcher was away show up when it's back.
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) { vm.scanSystemApps() }
+    val pinned by vm.tabStore.pinned.collectAsStateWithLifecycle()
+    val permissionOverrides by vm.permissionOverrides.collectAsStateWithLifecycle()
+    val gpuEnabled by vm.gpuEnabled.collectAsStateWithLifecycle()
+    val appearance by vm.appearance.collectAsStateWithLifecycle()
+    val diagnosticsEnabled by vm.diagnosticsEnabled.collectAsStateWithLifecycle()
+    val gpuApps by vm.gpuApps.collectAsStateWithLifecycle()
+    // Phones that have the GPU driver (see LauncherViewModel.gpuFor).
+    val gpuGraphics = remember { vm.gpuAvailable() }
+    val favorites by vm.tabStore.favorites.collectAsStateWithLifecycle()
+    val homeLayout by vm.homeLayout.layout.collectAsStateWithLifecycle()
+    val tabs = remember(apps, customTabs, pinned, favorites, homeLayout) { vm.tabs(apps, customTabs, pinned, favorites, homeLayout) }
+    // Customizing the home screen: dragging icons, its settings, and one app's icon color.
+    var editingHome by remember { mutableStateOf(false) }
+    var homeSettings by remember { mutableStateOf(false) }
+    var iconColorApp by remember { mutableStateOf<PermissionManifest?>(null) }
+    var addingWidget by remember { mutableStateOf(false) }
+
+    var destination by rememberSaveable { mutableStateOf(Destination.Apps) }
+    var showingAppsGrid by rememberSaveable { mutableStateOf(false) }
+    var openApp by remember { mutableStateOf<PermissionManifest?>(null) }
+    var addingTab by remember { mutableStateOf(false) }
+    var removingTab by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    var openConfig by remember { mutableStateOf<ConfigFile?>(null) }
+    var openStoreApp by remember { mutableStateOf<StoreApp?>(null) }
+    var showQueue by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
+    var logSession by remember { mutableStateOf<String?>(null) }
+    /** The Sessions title bar's Logs, opened on the newest session. */
+    var showLogs by remember { mutableStateOf(false) }
+    var uninstallApp by remember { mutableStateOf<PermissionManifest?>(null) }
+    var editingShortcut by remember { mutableStateOf<Shortcut?>(null) }
+    var graphicsApp by remember { mutableStateOf<PermissionManifest?>(null) }
+    var execApp by remember { mutableStateOf<PermissionManifest?>(null) }
+    var showTrackpad by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
+    val filesUi = remember { FilesUi() }
+    /** The Apps tab's search: a pill in its bar, opening to full-screen results. */
+    val queue by vm.queue.collectAsStateWithLifecycle()
+    val catalog by vm.catalog.collectAsStateWithLifecycle()
+    val flathubCatalog by vm.flathubCatalog.collectAsStateWithLifecycle()
+    val storeSource by vm.storeSource.collectAsStateWithLifecycle()
+    val flathubReady by vm.flathubReady.collectAsStateWithLifecycle()
+    val flathubInstalled by vm.flathubInstalled.collectAsStateWithLifecycle()
+    val flathubFsync by vm.flathubFsync.collectAsStateWithLifecycle()
+    val installedPackages by vm.installedPackages.collectAsStateWithLifecycle()
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val launchApp: (PermissionManifest) -> Unit = { app ->
+        vm.launch(app) { started ->
+            openApp = null
+            destination = Destination.Sessions
+            if (started.terminal != null) TerminalActivity.open(context, started.session.id)
+        }
+    }
+    // Apps granted shared-storage folders need Android's storage permission first. Launch
+    // either way: if it's denied, the folder is simply empty inside the container.
+    var pendingLaunch by remember { mutableStateOf<PermissionManifest?>(null) }
+    val linuxThemes by vm.linuxThemes.collectAsStateWithLifecycle()
+    // Any file: theme archives come as .tar.xz, .tar.gz or .zip, with types phones rarely know.
+    val themePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(vm::importTheme)
+    }
+    val storageRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        pendingLaunch?.let(launchApp)
+        pendingLaunch = null
+    }
+    val startApp: (PermissionManifest) -> Unit = { app ->
+        val storage = app.permissions.drives ||
+            app.permissions.filesystem.any { it.path.startsWith("/storage") || it.path.startsWith("/sdcard") }
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+            PackageManager.PERMISSION_GRANTED
+        if (storage && !granted) {
+            pendingLaunch = app
+            storageRequest.launch(
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
+            )
+        } else {
+            launchApp(app)
+        }
+    }
+
+
+    // An X11 window's Permissions tile asks for an app's sheet.
+    val requestedApp by vm.showAppRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(requestedApp, apps) {
+        val id = requestedApp ?: return@LaunchedEffect
+        apps.firstOrNull { it.id == id }?.let { openApp = it; destination = Destination.Apps }
+        vm.showAppRequests.value = null
+    }
+
+    // The store loads (or refreshes its week-old cache) when first opened.
+    LaunchedEffect(destination, status) {
+        if (destination == Destination.Store && status != null) vm.openStore()
+    }
+
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
+    // Once what an app was missing is installed: open it again from here.
+    LaunchedEffect(Unit) {
+        vm.reopen.collect { app ->
+            val r = snackbar.showSnackbar("${app.name} has what it was missing now", actionLabel = "Open", duration = SnackbarDuration.Long)
+            if (r == SnackbarResult.ActionPerformed) startApp(app)
+        }
+    }
+    val missingPrompt by vm.missingPrompt.collectAsStateWithLifecycle()
+    // The Files tab follows the engine: PRoot's system or chroot's, once it's usable.
+    LaunchedEffect(status, mode) { vm.files.useEngine(vm.filesEngine(status, mode)) }
+    // Search belongs to the Apps tab; leaving it closes the search.
+    // The task manager samples only while Sessions is on screen. It reads as root wherever root
+    // has been granted, to see what runs as root (chroot apps, and Tessera's own root helpers,
+    // which outlive a switch to PRoot mode).
+    val monitorSu = if (mode != BackendMode.PROOT || vm.rootGranted) status?.su else null
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val processes by androidx.compose.runtime.produceState<List<com.daryan.tessera.container.GuestProcess>?>(null, destination, monitorSu, lifecycle) {
+        value = null
+        if (destination != Destination.Sessions) return@produceState
+        // Only while it's on screen: a launcher left in the background kept sampling, as root.
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            com.daryan.tessera.container.ProcessMonitor(monitorSu).watch().collect { value = it }
+        }
+    }
+    val messageScope = rememberCoroutineScope()
+    val filesMessage: (String) -> Unit = { m -> messageScope.launch { snackbar.showSnackbar(m) } }
+    val terminalHere: (String) -> Unit = { dir ->
+        vm.terminalIn(dir, vm.files.root) { started ->
+            if (started.terminal != null) TerminalActivity.open(context, started.session.id)
+        }
+    }
+
+    // An app's icon on the phone's home screen asks for it to start, once Linux is checked.
+    val launchRequest by vm.launchRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(launchRequest, apps, status) {
+        val id = launchRequest ?: return@LaunchedEffect
+        if (status == null || apps.isEmpty()) return@LaunchedEffect
+        vm.launchRequests.value = null
+        val app = apps.firstOrNull { it.id == id }
+        if (app != null) startApp(app) else snackbar.showSnackbar("That app isn't installed anymore")
+    }
+
+    // A screen of its own, like the trackpad a cast gets: it drives a PC, not anything in here.
+    if (showTrackpad) {
+        PcTrackpadScreen(su = status?.su, onClose = { showTrackpad = false })
+        return
+    }
+
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    var showUternixSearch by remember { mutableStateOf(false) }
+    var showCategories by remember { mutableStateOf(false) }
+    val pagerState = rememberPagerState { tabs.size }
+    val scope = rememberCoroutineScope()
+    val motion = MaterialTheme.motionScheme
+    val blocker = vm.blocker(status, mode)
+    val installMissing: (PermissionManifest, com.daryan.tessera.store.Missing) -> Unit = { app, missing ->
+        val ok = vm.installMissing(app, missing)
+        scope.launch { snackbar.showSnackbar(if (ok) "Looking for ${missing.label}; follow it under Installs" else blocker ?: "Linux isn't ready yet") }
+    }
+    val running = sessions.count { it.exitCode == null }
+    val config = LocalConfiguration.current
+    val shortScreen = config.screenHeightDp < 480
+    val useRail = config.screenWidthDp >= 600 || config.screenWidthDp > config.screenHeightDp
+
+    val store = vm.configStore(status, mode)
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            // Every action closes the menu first, then does its thing.
+            fun closing(action: () -> Unit): () -> Unit = { scope.launch { drawerState.close() }; action() }
+            fun launchById(id: String) {
+                val app = apps.firstOrNull { it.id == id }
+                if (app != null) startApp(app) else scope.launch { snackbar.showSnackbar("That app isn't installed") }
+            }
+            SideMenu(
+                status = MenuStatus(
+                    mode = mode,
+                    blocker = blocker.takeIf { status != null },
+                    running = running,
+                    activeInstalls = queue.count { it.active },
+                    rootAvailable = status?.su != null,
+                    destination = destination,
+                    container = if (mode == BackendMode.DROIDSPACES) {
+                        status?.droidspacesSelected?.let { "${it.name}, ${if (it.running) "running" else "stopped"}" } ?: "none picked"
+                    } else null,
+                ),
+                actions = MenuActions(
+                    go = { d -> scope.launch { drawerState.close() }; destination = d },
+                    terminal = closing { launchById("bash") },
+                    rootShell = closing { launchById("root-shell") },
+                    newShortcut = closing { destination = Destination.Apps; editingShortcut = Shortcut(id = "", name = "", command = "") },
+                    trackpad = closing { showTrackpad = true },
+                    installs = closing { showQueue = true },
+                    systemFiles = closing { showSettings = true },
+                    displaySettings = closing { context.startActivity(Intent().setClassName(context, "com.termux.x11.LoriePreferences")) },
+                    copyDiagnostics = closing {
+                        scope.launch {
+                            val report = vm.diagnosticsReport()
+                            context.getSystemService(android.content.ClipboardManager::class.java)
+                                .setPrimaryClip(android.content.ClipData.newPlainText("Tessera diagnostics", report))
+                            snackbar.showSnackbar("Diagnostics copied, ready to paste")
+                        }
+                    },
+                    setMode = vm::setMode,
+                    settings = closing { showSettings = true },
+                    about = closing { showAbout = true },
+                    intro = closing { vm.setIntroSeen(false) },
+                ),
+            )
+        },
+    ) {
+    // Only where the large title bar is there to collapse: without it the scroll behavior never
+    // learns how far it may go, and takes every scroll up for itself (the Apps tab's grid froze).
+    val collapsingBar = false
+    UtBackdrop(Modifier.fillMaxSize()) {
+    Row(Modifier.fillMaxSize()) {
+        if (useRail) UternixRail(destination, { if(it==Destination.Apps && destination==Destination.Apps) showingAppsGrid=false; destination = it }, badge = { d ->
+            if (d == Destination.Sessions && running > 0) Badge { Text("$running") }
+            if (d == Destination.Setup && blocker != null && status != null) Badge()
+        })
+    Scaffold(
+        modifier = (if (useRail) Modifier.weight(1f) else Modifier).let {
+            if (collapsingBar) it.nestedScroll(scrollBehavior.nestedScrollConnection) else it
+        },
+        containerColor = Color.Transparent,
+        snackbarHost = { SnackbarHost(snackbar) },
+        topBar = topBar@{
+            if (destination == Destination.Files) {
+                Column(Modifier) {
+                    FilesTopBar(
+                        b = vm.files,
+                        ui = filesUi,
+                        onMenu = { scope.launch { drawerState.open() } },
+                        onMessage = filesMessage,
+                        onTerminalHere = terminalHere,
+                        realRoot = mode != BackendMode.PROOT,
+                    )
+                    AnimatedVisibility(
+                        visible = queue.any { it.active },
+                        enter = expandVertically(motion.defaultSpatialSpec()) + fadeIn(motion.defaultEffectsSpec()),
+                        exit = shrinkVertically(motion.fastSpatialSpec()) + fadeOut(motion.fastEffectsSpec()),
+                    ) {
+                        QueueStrip(queue, onOpenQueue = { showQueue = true })
+                    }
+                }
+                return@topBar
+            }
+            Column(Modifier) {
+                val title = @Composable { Text(destination.title) }
+                val subtitle = @Composable {
+                    Text(
+                        when (destination) {
+                            Destination.Apps -> "${mode.label} · ${apps.size} apps"
+                            Destination.Files -> ""
+                            Destination.Store -> ((if (storeSource == StoreSource.FLATHUB) flathubCatalog else catalog) as? CatalogState.Ready)
+                                ?.let { "${it.apps.size} apps from ${storeSource.label}" } ?: "Apps from ${storeSource.label}"
+                            Destination.Sessions -> if (running == 0) "Nothing running" else "$running running"
+                            Destination.Setup -> blocker ?: "Ready to launch apps"
+                        },
+                    )
+                }
+                val menuButton = @Composable {
+                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        Icon(Icons.Rounded.Menu, "Configuration")
+                    }
+                }
+                val barColors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
+                )
+                // The Store's history: every install and removal, with apt's output.
+                val actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {
+                    // Where search used to be: the desktop, which opens its sheet like any app.
+                    if (destination == Destination.Apps) {
+                        apps.firstOrNull { it.desktop }?.let { desktop ->
+                            IconButton(onClick = { openApp = desktop }) { DebIconImage(DebIcon.SysAltSystem, size = 30.dp, contentDescription = desktop.name) }
+                        }
+                    }
+                    // What sessions printed, moved off their cards.
+                    if (destination == Destination.Sessions) {
+                        IconButton(onClick = { showLogs = true }) { DebIconImage(DebIcon.UtilAltTerminalLogs, size = 30.dp, contentDescription = "Logs") }
+                    }
+                    if (destination == Destination.Store) {
+                        val active = queue.count { it.active }
+                        IconButton(onClick = { showQueue = true }) {
+                            BadgedBox(badge = { if (active > 0) Badge { Text("$active") } }) {
+                                DebIconImage(DebIcon.NavHistory, size = 30.dp, contentDescription = "Recent installs")
+                            }
+                        }
+                    }
+                }
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(if (destination == Destination.Apps) (if(showingAppsGrid) stringResource(R.string.ut_nav_apps) else "uTernix") else when(destination){
+                                Destination.Files -> stringResource(R.string.ut_nav_files)
+                                Destination.Store -> stringResource(R.string.ut_nav_store)
+                                Destination.Sessions -> stringResource(R.string.ut_nav_sessions)
+                                Destination.Setup -> stringResource(R.string.ut_nav_setup)
+                                else -> "uTernix"
+                            }, style = MaterialTheme.typography.titleLarge)
+                            Text(when(destination){
+                                Destination.Apps -> "${apps.size} ${stringResource(R.string.ut_nav_apps).lowercase()}"
+                                Destination.Store -> storeSource.label
+                                Destination.Sessions -> "$running"
+                                Destination.Setup -> mode.label
+                                else -> ""
+                            }, style = MaterialTheme.typography.bodySmall, color = UColors.Muted)
+                        }
+                    },
+                    navigationIcon = menuButton,
+                    actions = {
+                        if(destination == Destination.Apps){
+                            IconButton(onClick={ showUternixSearch = true }){
+                                Icon(Icons.Rounded.Search,stringResource(R.string.ut_search))
+                            }
+                            if(showingAppsGrid) IconButton(onClick={showCategories = true}){
+                                Icon(Icons.Rounded.FilterList,stringResource(R.string.ut_categories))
+                            }
+                            if(showingAppsGrid) DropdownMenu(expanded=showCategories,onDismissRequest={showCategories=false}){
+                                tabs.forEachIndexed { index, tab ->
+                                    DropdownMenuItem(text={Text(tab.title)},onClick={
+                                        showCategories=false
+                                        scope.launch { pagerState.animateScrollToPage(index) }
+                                    })
+                                }
+                            }
+                        }
+                        actions()
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor=UColors.Background,scrolledContainerColor=UColors.Background,
+                        titleContentColor=UColors.Text,actionIconContentColor=UColors.Text,
+                        navigationIconContentColor=UColors.Text
+                    )
+                )
+                AnimatedVisibility(
+                    visible = queue.any { it.active },
+                    enter = expandVertically(motion.defaultSpatialSpec()) + fadeIn(motion.defaultEffectsSpec()),
+                    exit = shrinkVertically(motion.fastSpatialSpec()) + fadeOut(motion.fastEffectsSpec()),
+                ) {
+                    QueueStrip(queue, onOpenQueue = { showQueue = true })
+                }
+            }
+        },
+        bottomBar = {
+            if (!useRail) FloatingDock(
+                selected = destination,
+                onSelect = { if(it==Destination.Apps && destination==Destination.Apps) showingAppsGrid=false; destination = it },
+                badge = { d ->
+                    if (d == Destination.Sessions && running > 0) Badge { Text("$running") }
+                    if (d == Destination.Setup && blocker != null && status != null) Badge()
+                },
+            )
+        },
+    ) { padding ->
+        AnimatedContent(
+            targetState = destination,
+            modifier = Modifier.fillMaxSize(),
+            transitionSpec = {
+                (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f))
+                    .togetherWith(fadeOut(motion.fastEffectsSpec()))
+            },
+            label = "destination",
+        ) { d ->
+            when (d) {
+                Destination.Apps -> if (!showingAppsGrid) UternixHome(
+                    appCount=apps.size,running=running,linuxMode=mode.label,blocker=blocker,apps=apps,
+                    onOpenAllApps={showingAppsGrid=true},onOpen={openApp=it},
+                    onTerminal={
+                        apps.firstOrNull{it.id=="bash" || it.id=="root-shell"}?.let(startApp)
+                            ?: run { destination=Destination.Setup }
+                    },
+                    onFiles={destination=Destination.Files},onStore={destination=Destination.Store},
+                    onSetup={destination=Destination.Setup},onQueue={showQueue=true},padding=padding
+                ) else AppsPager(
+                    tabs, pagerState, padding,
+                    onOpen = { openApp = it },
+                    pinned = pinned,
+                    favorites = favorites,
+                    onTogglePin = { vm.tabStore.togglePinned(it.id) },
+                    onToggleFavorite = { vm.tabStore.toggleFavorite(it.id) },
+                    onEditShortcut = { app -> vm.shortcuts.value.firstOrNull { it.id == Shortcut.idOf(app) }?.let { editingShortcut = it } },
+                    onNewShortcut = { editingShortcut = Shortcut(id = "", name = "", command = "") },
+                    onTrackpad = { showTrackpad = true },
+                    onUninstall = { app ->
+                        val shortcut = vm.shortcuts.value.firstOrNull { Shortcut.isShortcut(app) && it.id == Shortcut.idOf(app) }
+                        if (shortcut != null) {
+                            // Just the icon: the packages it needed may serve other things.
+                            vm.deleteShortcut(app)
+                            scope.launch {
+                                val undo = snackbar.showSnackbar("Deleted ${app.name}", actionLabel = "Undo", duration = SnackbarDuration.Short)
+                                if (undo == SnackbarResult.ActionPerformed) vm.saveShortcut(shortcut)
+                            }
+                        // Flathub apps have no Debian packages, and were turned away here as part of the system.
+                        } else if (app.packages.isEmpty() && app.flatpak == null && !SystemApps.isSystemApp(app)) {
+                            scope.launch { snackbar.showSnackbar("${app.name} is part of the Linux system and can't be uninstalled") }
+                        } else {
+                            uninstallApp = app
+                        }
+                    },
+                    onEditExec = { execApp = it },
+                    graphics = gpuGraphics || appearance.enabled,
+                    onGraphics = { graphicsApp = it },
+                    layout = homeLayout,
+                    editing = editingHome,
+                    onEditing = { editingHome = it },
+                    onReorder = vm.homeLayout::setOrder,
+                    onHomeSettings = { homeSettings = true },
+                    onIconColor = { iconColorApp = it },
+                    onHide = { app ->
+                        vm.homeLayout.setHidden(app.id, true)
+                        scope.launch {
+                            val undo = snackbar.showSnackbar("${app.name} is hidden", actionLabel = "Undo", duration = SnackbarDuration.Short)
+                            if (undo == SnackbarResult.ActionPerformed) vm.homeLayout.setHidden(app.id, false)
+                        }
+                    },
+                    onWidgets = { addingWidget = true },
+                    widget = { widget, modifier ->
+                        HomeWidgetCard(
+                            widget = widget,
+                            running = sessions,
+                            target = widget.target?.let { t -> apps.firstOrNull { it.id == t.appId } },
+                            editing = editingHome,
+                            onStart = startApp,
+                            onShowSession = { s ->
+                                if (s.terminal != null) TerminalActivity.open(context, s.session.id) else vm.sessions.showWindow(s.session.id)
+                            },
+                            onResize = { vm.homeLayout.setWidgetWide(widget.id, !widget.wide) },
+                            onRemove = { vm.homeLayout.removeWidget(widget.id) },
+                            modifier = modifier,
+                        )
+                    },
+                )
+                Destination.Files -> FilesScreen(vm.files, filesUi, padding, onMessage = filesMessage)
+                Destination.Store -> StoreScreen(
+                    source = storeSource,
+                    onSource = vm::setStoreSource,
+                    catalog = if (storeSource == StoreSource.FLATHUB) flathubCatalog else catalog,
+                    installed = { app ->
+                        if (app.source == StoreSource.FLATHUB) app.id in flathubInstalled else installedPackages?.contains(app.pkg)
+                    },
+                    flathubReady = flathubReady,
+                    flathubSetup = vm.flathubSetupJob(queue),
+                    onSetUpFlathub = {
+                        if (!vm.setupFlathub()) scope.launch { snackbar.showSnackbar(blocker ?: "Linux isn't ready yet") }
+                    },
+                    padding = padding,
+                    loadIcon = vm::loadStoreIcon,
+                    onRetry = { vm.openStore(refresh = true) },
+                    onOpenApp = { openStoreApp = it },
+                )
+                Destination.Sessions -> SessionsScreen(
+                    sessions,
+                    padding,
+                    onOpen = { id ->
+                        // Terminal apps open in-app; GUI apps live in their own X11 window.
+                        val s = sessions.firstOrNull { it.session.id == id }
+                        when {
+                            s?.terminal != null -> TerminalActivity.open(context, id)
+                            s?.running == true -> vm.sessions.showWindow(id)
+                            // A GUI app that stopped: show what it printed.
+                            else -> logSession = id
+                        }
+                    },
+                    onStop = vm.sessions::stop,
+                    onDismiss = vm.sessions::dismiss,
+                    processes = processes,
+                    onCloseAll = vm.sessions::stopAll,
+                    onEndProcess = { p -> scope.launch { com.daryan.tessera.container.ProcessMonitor.end(p.pid, p.uid, monitorSu) } },
+                    missingFor = vm::missingFor,
+                    onInstallMissing = installMissing,
+                )
+                Destination.Setup -> SetupScreen(
+                    status = status,
+                    mode = mode,
+                    install = install,
+                    padding = padding,
+                    onMode = vm::setMode,
+                    onRefresh = vm::refresh,
+                    onInstall = { vm.install() },
+                    onCancelInstall = vm::cancelInstall,
+                    onLiftPhantomLimit = vm::liftPhantomLimit,
+                    removingLinux = removingLinux,
+                    onRemoveLinux = vm::removeChrootLinux,
+                    diagnosticsEnabled = diagnosticsEnabled,
+                    onDiagnostics = vm::setDiagnosticsEnabled,
+                    onCopyDiagnostics = {
+                        scope.launch {
+                            val report = vm.diagnosticsReport()
+                            context.getSystemService(android.content.ClipboardManager::class.java)
+                                .setPrimaryClip(android.content.ClipData.newPlainText("Tessera diagnostics", report))
+                            snackbar.showSnackbar("Diagnostics copied, ready to paste")
+                        }
+                    },
+                    onShowIntro = { vm.setIntroSeen(false) },
+                    droidspaces = DroidspacesActions(
+                        select = vm::selectContainer,
+                        start = vm::startContainer,
+                        stop = vm::stopContainer,
+                        prepare = vm::prepareContainer,
+                        installTools = vm::installContainerTools,
+                    ),
+                    containerBusy = containerBusy,
+                )
+            }
+        }
+    }
+    }
+    }
+    }
+
+    if (showUternixSearch) UternixAppSearch(apps, onDismiss={showUternixSearch=false}, onOpen={openApp=it})
+
+    AnimatedVisibility(
+        visible = showSettings,
+        enter = slideInVertically(motion.defaultSpatialSpec()) { it } + fadeIn(motion.defaultEffectsSpec()),
+        exit = slideOutVertically(motion.fastSpatialSpec()) { it } + fadeOut(motion.fastEffectsSpec()),
+    ) { PageShown {
+        SettingsScreen(
+            filesUnavailable = when {
+                store != null -> null
+                mode == BackendMode.CHROOT -> "Root access is needed to edit the chroot container"
+                mode == BackendMode.DROIDSPACES -> "Pick a Droidspaces container in Setup to edit its files"
+                else -> "Install Linux in Setup to edit its files"
+            },
+            onOpenFile = { openConfig = it },
+            customTabs = customTabs,
+            onAddTab = { addingTab = true },
+            onRemoveTab = { removingTab = it },
+            catalog = catalog,
+            onRefreshCatalog = { vm.openStore(refresh = true) },
+            flathubFsync = flathubFsync,
+            onFlathubFsync = vm::setFlathubFsync,
+            activeInstalls = queue.count { it.active },
+            onOpenQueue = { showQueue = true },
+            onDisplaySettings = { context.startActivity(Intent().setClassName(context, "com.termux.x11.LoriePreferences")) },
+            gpuEnabled = gpuEnabled.takeIf { vm.gpuAvailable() },
+            onGpuEnabled = vm::setGpuEnabled,
+            appearance = appearance,
+            onAppearance = vm::setAppearance,
+            linuxThemes = linuxThemes,
+            onImportTheme = { themePicker.launch(arrayOf("*/*")) },
+            onDeleteTheme = vm::deleteTheme,
+            runningSessions = running,
+            onStopAll = vm.sessions::stopAll,
+            onAbout = { showAbout = true },
+            onClose = { showSettings = false },
+        )
+    } }
+
+    openStoreApp?.let { app ->
+        // The launcher entry for this package (or Flathub app), once it's been installed from here or bundled.
+        val flathub = app.source == StoreSource.FLATHUB
+        val entry = apps.firstOrNull { if (flathub) it.flatpak?.app == app.id else app.pkg in it.packages }
+        val key = vm.storeJobKey(app)
+        StoreAppSheet(
+            app = app,
+            icon = vm.storeIcon(app),
+            screenshots = { vm.storeScreenshots(app) },
+            installed = if (flathub) app.id in flathubInstalled else installedPackages?.contains(app.pkg),
+            blocker = blocker,
+            job = queue.lastOrNull { key in it.packages && it.active },
+            firstFlathub = flathub && flathubInstalled.isEmpty(),
+            onInstall = {
+                val first = flathub && flathubInstalled.isEmpty()
+                if (vm.storeInstall(app)) {
+                    openStoreApp = null
+                    scope.launch {
+                        snackbar.showSnackbar(
+                            if (first) "${app.name} added to installs. The first Flathub app brings its runtimes too, so it takes longer"
+                            else "${app.name} added to installs",
+                        )
+                    }
+                }
+            },
+            onOpen = entry?.let { e -> { openStoreApp = null; launchApp(e) } },
+            onUninstall = {
+                if (vm.storeUninstall(app)) {
+                    openStoreApp = null
+                    scope.launch { snackbar.showSnackbar("Removing ${app.name}") }
+                }
+            },
+            onDismiss = { openStoreApp = null },
+        )
+    }
+
+    graphicsApp?.let { app ->
+        // Read again whenever a switch changes (gpuApps), so the dialog follows them.
+        val gpu = remember(app.id, gpuApps, gpuEnabled, mode) { vm.gpuFor(app) }
+        val fixes = remember(app.id, gpuApps) { vm.gpuFixesFor(app) }
+        val unthemed by vm.unthemed.collectAsStateWithLifecycle()
+        val themed = (app.id !in unthemed).takeIf { appearance.enabled }
+        if (gpu == null && themed == null) graphicsApp = null
+        else GraphicsFixesDialog(
+            appName = app.name,
+            themed = themed,
+            onThemed = { vm.setThemed(app, it) },
+            gpu = gpu,
+            onGpu = { vm.setGpuFor(app, it) },
+            fixes = fixes,
+            onFix = { fix, on -> vm.setGpuFix(app, fix, on) },
+            onDismiss = { graphicsApp = null },
+        )
+    }
+
+    execApp?.let { app ->
+        ExecDialog(
+            appName = app.name,
+            // From the apps list, so it is already the user's command where they changed it.
+            exec = app.exec,
+            default = vm.defaultExec(app.id) ?: app.exec,
+            onSave = { vm.setExec(app, it) },
+            onReset = { vm.resetExec(app.id) },
+            onDismiss = { execApp = null },
+        )
+    }
+
+    editingShortcut?.let { s ->
+        ShortcutDialog(s, onDismiss = { editingShortcut = null }, onSave = { vm.saveShortcut(it); editingShortcut = null })
+    }
+
+    missingPrompt?.let { prompt ->
+        AlertDialog(
+            onDismissRequest = vm::dismissMissingPrompt,
+            icon = { AppGlyph(prompt.app, 28.dp, MaterialTheme.colorScheme.onSurface) },
+            title = { Text("${prompt.app.name} needs ${prompt.missing.label}") },
+            text = {
+                Text(
+                    "It stopped because Linux doesn't have ${prompt.missing.label}. uTernix can look up which Debian package " +
+                        "has it and install it, in the background under Installs. The first time, that downloads Debian's " +
+                        "lists of every package's files, a few tens of MB.",
+                )
+            },
+            confirmButton = { TextButton(onClick = { installMissing(prompt.app, prompt.missing) }) { Text("Find and install") } },
+            dismissButton = {
+                TextButton(onClick = { vm.dismissMissingPrompt(); logSession = prompt.sessionId }) { Text("Show log") }
+            },
+        )
+    }
+
+    uninstallApp?.let { app ->
+        AlertDialog(
+            onDismissRequest = { uninstallApp = null },
+            icon = { AppGlyph(app, 28.dp, MaterialTheme.colorScheme.onSurface) },
+            title = { Text("Uninstall ${app.name}?") },
+            text = {
+                Text(
+                    "Removes ${app.flatpak?.let { "${it.app} and the runtimes only it used" } ?: app.packages.joinToString()} from Linux. " +
+                        "Its settings in your home folder stay, in case you install it again.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val ok = if (SystemApps.isSystemApp(app)) {
+                        // Its package is looked up from dpkg first.
+                        scope.launch {
+                            val queued = vm.uninstallSystemApp(app)
+                            snackbar.showSnackbar(if (queued) "Removing ${app.name}" else "Couldn't tell which package ${app.name} came from")
+                        }
+                        uninstallApp = null
+                        return@TextButton
+                    } else vm.uninstall(app)
+                    uninstallApp = null
+                    scope.launch { snackbar.showSnackbar(if (ok) "Removing ${app.name}" else "Install Linux first") }
+                }) { Text("Uninstall") }
+            },
+            dismissButton = { TextButton(onClick = { uninstallApp = null }) { Text("Cancel") } },
+        )
+    }
+
+    if (showLogs || logSession != null) {
+        SessionLogSheet(sessions, initial = logSession, onDismiss = { logSession = null; showLogs = false })
+    }
+
+    AnimatedVisibility(
+        visible = showQueue,
+        enter = slideInVertically(motion.defaultSpatialSpec()) { it } + fadeIn(motion.defaultEffectsSpec()),
+        exit = slideOutVertically(motion.fastSpatialSpec()) { it } + fadeOut(motion.fastEffectsSpec()),
+    ) { PageShown {
+        InstallsScreen(
+            jobs = queue,
+            onCancel = vm::cancelJob,
+            onRetry = vm::retryJob,
+            onClearFinished = vm::clearFinishedJobs,
+            onClose = { showQueue = false },
+        )
+    } }
+
+    AnimatedVisibility(
+        visible = showAbout,
+        enter = slideInVertically(motion.defaultSpatialSpec()) { it } + fadeIn(motion.defaultEffectsSpec()),
+        exit = slideOutVertically(motion.fastSpatialSpec()) { it } + fadeOut(motion.fastEffectsSpec()),
+    ) { PageShown {
+        AboutScreen(onClose = { showAbout = false })
+    } }
+
+    // Config editor slides up over the launcher, like a full-screen sheet.
+    val editing = openConfig
+    AnimatedVisibility(
+        visible = editing != null && store != null,
+        enter = slideInVertically(motion.defaultSpatialSpec()) { it } + fadeIn(motion.defaultEffectsSpec()),
+        exit = slideOutVertically(motion.fastSpatialSpec()) { it } + fadeOut(motion.fastEffectsSpec()),
+    ) { PageShown {
+        val shown = remember { mutableStateOf(editing) }
+        if (editing != null) shown.value = editing
+        val file = shown.value
+        if (file != null && store != null) {
+            ConfigEditor(file, store, engine = mode.label, onClose = { openConfig = null })
+        }
+    } }
+
+    FilesDialogs(vm.files, filesUi, onMessage = filesMessage)
+
+    // Arranging ends with the Back button, or on leaving the home screen.
+    androidx.activity.compose.BackHandler(enabled = editingHome) { editingHome = false }
+    LaunchedEffect(destination) { if (destination != Destination.Apps) editingHome = false }
+    if (homeSettings) {
+        HomeSettingsSheet(
+            layout = homeLayout,
+            store = vm.homeLayout,
+            apps = apps,
+            onEditLayout = { editingHome = true },
+            onWidgets = { addingWidget = true },
+            onDismiss = { homeSettings = false },
+        )
+    }
+    if (addingWidget) {
+        // To the tab that's showing, which is where the sheet was opened from.
+        val tabTitle = tabs.getOrNull(pagerState.currentPage)?.title ?: tabs.first().title
+        WidgetsSheet(
+            tab = tabTitle,
+            targets = vm::widgetTargets,
+            onAddHere = { kind, target -> vm.homeLayout.addWidget(kind, tabTitle, target) },
+            onDismiss = { addingWidget = false },
+        )
+    }
+    iconColorApp?.let { app -> key(app.id) {
+        IconColorSheet(
+            app = app,
+            current = homeLayout.iconColors[app.id],
+            onPick = { vm.homeLayout.setIconColor(app.id, it) },
+            onDismiss = { iconColorApp = null },
+        )
+    } }
+
+    // Opening something in an app: one that's already open is asked about first, as a second copy
+    // may refuse to start (Firefox's profile is taken) and only the user can say to close the first.
+    var alreadyOpen by remember { mutableStateOf<AlreadyOpen?>(null) }
+    val startWith: (PermissionManifest, List<String>) -> Unit = { app, args ->
+        vm.openInLinux(app, args) { started ->
+            if (started.terminal != null) TerminalActivity.open(context, started.session.id)
+        }
+    }
+    val openWith: (PermissionManifest, List<String>) -> Unit = { app, args ->
+        val running = vm.runningCopy(app)
+        if (running != null) alreadyOpen = AlreadyOpen(app, args, running.session.id) else startWith(app, args)
+    }
+    alreadyOpen?.let { open ->
+        AlertDialog(
+            onDismissRequest = { alreadyOpen = null },
+            title = { Text("${open.app.name} is already open") },
+            text = { Text("Close it and open this instead? Unsaved work in it will be lost. Some apps can run a second copy, but others, like Firefox, can't.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    alreadyOpen = null
+                    vm.sessions.restart(open.sessionId, null) { startWith(open.app, open.args) }
+                }) { Text("Close it and open this") }
+            },
+            dismissButton = {
+                TextButton(onClick = { alreadyOpen = null }) { Text("Cancel") }
+                TextButton(onClick = {
+                    alreadyOpen = null
+                    startWith(open.app, open.args)
+                }) { Text("Open another copy") }
+            },
+        )
+    }
+
+    // Something another app sent through "Open with" or "Share", once Linux is checked.
+    val sharedIn by vm.sharedRequests.collectAsStateWithLifecycle()
+    sharedIn?.takeIf { status != null }?.let { shared -> key(shared) {
+        SharedInSheet(
+            shared = shared,
+            prepare = vm::prepareShared,
+            allApps = vm::openableApps,
+            onDismiss = { vm.sharedRequests.value = null },
+            onOpen = { opener, args ->
+                vm.sharedRequests.value = null
+                openWith(vm.appFor(opener), args)
+            },
+            onOpenApp = { app, args ->
+                vm.sharedRequests.value = null
+                openWith(app, args)
+            },
+        )
+    } }
+
+    filesUi.opening?.let { entry -> key(entry.path) {
+        val done = { if (filesUi.opening?.path == entry.path) filesUi.opening = null }
+        OpenWithSheet(
+            b = vm.files,
+            entry = entry,
+            launcherApp = vm::linuxAppFor,
+            allApps = vm::openableApps,
+            onDismiss = done,
+            onEdit = { done(); filesUi.editing = entry },
+            onExtract = { done(); filesUi.dialog = FilesDialog.Extract(entry) },
+            onInstallDeb = { info -> done(); vm.installDeb(entry, info) },
+            onOpenSetup = { done(); destination = Destination.Setup },
+            onOpenLinux = { opener ->
+                done()
+                openWith(vm.appFor(opener), listOf(entry.path))
+            },
+            onOpenApp = { app ->
+                done()
+                openWith(app, listOf(entry.path))
+            },
+            onMessage = filesMessage,
+        )
+    } }
+
+    // A text file from the Files tab, in the same editor as the system files.
+    val editingFile = filesUi.editing
+    AnimatedVisibility(
+        visible = editingFile != null,
+        enter = slideInVertically(motion.defaultSpatialSpec()) { it } + fadeIn(motion.defaultEffectsSpec()),
+        exit = slideOutVertically(motion.fastSpatialSpec()) { it } + fadeOut(motion.fastEffectsSpec()),
+    ) { PageShown {
+        val shown = remember { mutableStateOf(editingFile) }
+        if (editingFile != null) shown.value = editingFile
+        shown.value?.let { e ->
+            val store = remember(e.path) { vm.files.textStore() }
+            ConfigEditor(
+                editorFile(e), store, engine = mode.label,
+                onClose = { filesUi.editing = null; vm.files.reload() },
+                savedMessage = "Saved",
+            )
+        }
+    } }
+
+    // Looked up by id so the sheet follows permission changes made in it.
+    // Keyed by app: opening another app while one sheet is still sliding away gets a sheet of
+    // its own, rather than taking over the closing one (whose end would then close it too).
+    apps.firstOrNull { it.id == openApp?.id }?.let { app -> key(app.id) {
+        AppSheet(
+            app = app,
+            backend = vm.backend(mode) ?: vm.backend(BackendMode.PROOT)!!,
+            blocker = blocker,
+            installed = vm.installed(app, status, mode),
+            customTabs = customTabs,
+            onToggleTab = { vm.tabStore.toggle(it, app.id) },
+            // One desktop at a time: opening it again goes back to the one running.
+            onLaunch = {
+                val runningDesktop = if (app.desktop) sessions.firstOrNull { it.app.id == app.id && it.running } else null
+                if (runningDesktop != null) {
+                    openApp = null
+                    vm.sessions.showWindow(runningDesktop.session.id)
+                } else startApp(app)
+            },
+            onInstall = {
+                if (vm.install(app)) {
+                    openApp = null
+                    scope.launch { snackbar.showSnackbar("${app.name} added to installs") }
+                }
+            },
+            // Only if it's still this app's sheet that's open.
+            onDismiss = { if (openApp?.id == app.id) openApp = null },
+            permissionsChanged = app.id in permissionOverrides,
+            onPermissions = { vm.setPermissions(app, it) },
+            onResetPermissions = { vm.resetPermissions(app.id) },
+            gpu = remember(app.id, gpuApps, gpuEnabled, mode) { vm.gpuFor(app) },
+            onGpu = { vm.setGpuFor(app, it) },
+            extras = if (app.desktop) ({ DesktopSheetNotes(running = sessions.any { it.app.id == app.id && it.running }) }) else null,
+        )
+    } }
+
+    if (addingTab) {
+        var name by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { addingTab = false },
+            title = { Text("New tab") },
+            text = {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(24) },
+                    singleLine = true,
+                    label = { Text("Name") },
+                )
+            },
+            confirmButton = {
+                TextButton(enabled = name.isNotBlank(), onClick = {
+                    vm.tabStore.add(name)
+                    addingTab = false
+                    scope.launch { pagerState.animateScrollToPage(tabs.size) }
+                }) { Text("Create") }
+            },
+            dismissButton = { TextButton(onClick = { addingTab = false }) { Text("Cancel") } },
+        )
+    }
+
+    removingTab?.let { tab ->
+        AlertDialog(
+            onDismissRequest = { removingTab = null },
+            title = { Text("Remove “$tab”?") },
+            text = { Text("The apps stay installed; only the tab goes away.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.tabStore.remove(tab)
+                    removingTab = null
+                }) { Text("Remove") }
+            },
+            dismissButton = { TextButton(onClick = { removingTab = null }) { Text("Cancel") } },
+        )
+    }
+}

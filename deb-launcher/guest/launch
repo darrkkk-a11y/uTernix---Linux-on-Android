@@ -1,0 +1,23 @@
+#!/bin/sh
+# Start a Linux program inside the guest. This is not a security boundary.
+# Only direct ELF64 little-endian x86-64 executables are translated; scripts
+# which subsequently exec x86-64 programs need a separate binfmt solution.
+set -eu
+if [ "$#" -eq 0 ]; then
+    printf '%s\n' 'No program specified' >&2
+    exit 2
+fi
+target=$(command -v "$1" 2>/dev/null || :)
+if [ -n "$target" ] && [ -f "$target" ] && [ "$(uname -m)" = aarch64 ]; then
+    magic=$(/usr/bin/dd if="$target" bs=1 count=6 2>/dev/null | /usr/bin/od -An -tx1 | /usr/bin/tr -d ' \n')
+    machine=$(/usr/bin/dd if="$target" bs=1 skip=18 count=2 2>/dev/null | /usr/bin/od -An -tx1 | /usr/bin/tr -d ' \n')
+    if [ "$magic" = 7f454c460201 ] && [ "$machine" = 3e00 ]; then
+        box64=${DEB_LAUNCHER_BOX64:-/opt/deb-launcher/box64-0.4.4-v2/box64}
+        if [ ! -x "$box64" ]; then
+            printf '%s\n' 'This x86-64 program needs Box64, which is not installed.' >&2
+            exit 126
+        fi
+        exec "$box64" "$@"
+    fi
+fi
+exec "$@"

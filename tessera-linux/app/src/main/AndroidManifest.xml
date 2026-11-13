@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Being a Bluetooth mouse and keyboard for a PC (the trackpad). No maxSdkVersion on the
+         old pair: Tessera targets API 28 on purpose (see the README), and Android keeps asking a
+         legacy-target app for BLUETOOTH however new the phone is. Capping them at 30 left the app
+         with no Bluetooth permission at all, and getProfileProxy threw. BLUETOOTH_CONNECT is here
+         for the day the target level rises; it is ignored until then. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Only requested when an app's manifest grants a folder under /storage. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <application
+        android:name=".LauncherApplication"
+        android:allowBackup="false"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Tessera"
+        tools:replace="android:name,android:allowBackup">
+
+        <!-- Predictive back (the window shrinking as you swipe) for the launcher only, Android 14+.
+             Not for X11Window or TerminalActivity: opting in stops back reaching them as a key,
+             and Linux apps take it as one (Termux:X11's back action, a mouse's right click). -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:enableOnBackInvokedCallback="true"
+            tools:targetApi="34"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- A GUI app's window: Termux:X11's tagged window plus our controls. Same document
+             settings as Termux:X11's own, so each app is a separate card in Recents. -->
+        <activity
+            android:name=".X11Window"
+            android:label="@string/linux_window_label"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@style/LorieAppTheme"
+            android:documentLaunchMode="intoExisting"
+            android:autoRemoveFromRecents="true"
+            android:supportsPictureInPicture="true"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="stateHidden|adjustNothing"
+            android:configChanges="fontScale|orientation|screenSize|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|screenLayout|touchscreen|uiMode|smallestScreenSize|density" />
+
+        <!-- A Linux app's notification swiped away (LinuxNotifier). -->
+        <receiver android:name=".container.LinuxNotifier$Dismissed" android:exported="false" />
+
+        <!-- One task per terminal session, so each gets its own card in Recents. Both name their
+             task "<app> (Linux)" (brandForRecents); the label is for launchers that ignore that. -->
+        <activity
+            android:name=".TerminalActivity"
+            android:label="@string/linux_terminal_label"
+            android:exported="false"
+            android:taskAffinity=""
+            android:documentLaunchMode="intoExisting"
+            android:autoRemoveFromRecents="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density" />
+
+        <service
+            android:name=".ContainerService"
+            android:exported="false" />
+
+        <!-- Tessera in Android's "Open with" and "Share" menus, under a name that says what it
+             does there. MainActivity tells these apart by this component (SharedIn). -->
+        <activity-alias
+            android:name=".OpenInLinux"
+            android:exported="true"
+            android:label="Open in Linux"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Widgets for the phone's home screen, each kind with settings per widget (PhoneWidgets). -->
+        <receiver android:name=".widgets.AppHomeWidget" android:exported="true" android:label="@string/widget_app_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_app_info" />
+        </receiver>
+        <receiver android:name=".widgets.RunningHomeWidget" android:exported="true" android:label="@string/widget_running_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_running_info" />
+        </receiver>
+        <receiver android:name=".widgets.StatsHomeWidget" android:exported="true" android:label="@string/widget_stats_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_stats_info" />
+        </receiver>
+        <receiver android:name=".widgets.CommandHomeWidget" android:exported="true" android:label="@string/widget_command_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_command_info" />
+        </receiver>
+        <receiver android:name=".widgets.PhoneWidgets$Pinned" android:exported="false" />
+        <activity android:name=".widgets.WidgetSetupActivity" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
+
+        <!-- Hands files the Files tab copied out of Linux to Android apps (open with, share). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- Termux:X11's plain window would add a second launcher icon; GUI apps use its
+             tagged windows, which we open ourselves. -->
+        <activity android:name="com.termux.x11.MainActivity" tools:node="merge">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+    </application>
+</manifest>

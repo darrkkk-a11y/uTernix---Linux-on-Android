@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Phone home screen widgets, Daylight: the same palette as the launcher's light theme. -->
+    <color name="widget_surface">#FFF7FAFE</color>
+    <color name="widget_on_surface">#FF0A1B33</color>
+    <color name="widget_on_surface_variant">#FF44597A</color>
+    <color name="widget_accent">#FF0B6CE0</color>
+    <color name="widget_track">#FFC5D5EA</color>
+    <color name="widget_rim">#996AB4F2</color>
+</resources>

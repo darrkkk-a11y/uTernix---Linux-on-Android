@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources><string name="app_name">uTernix</string>
+<string name="ut_nav_apps">Приложения</string><string name="ut_nav_files">Файлы</string>
+<string name="ut_nav_store">Пакеты</string><string name="ut_nav_sessions">Сессии</string>
+<string name="ut_nav_setup">Система</string><string name="ut_search">Поиск приложений</string>
+<string name="ut_menu">Меню</string><string name="ut_all_apps">Все приложения</string>
+<string name="ut_categories">Категории приложений</string>
+<string name="ut_search_hint">Поиск по установленным приложениям</string>
+<string name="ut_empty_search">Приложения не найдены</string>    <string name="ut_home_title">Главная</string>
+    <string name="ut_recent_apps">Недавние приложения</string>
+    <string name="ut_no_apps">Установленные программы появятся здесь.</string>
+    <string name="ut_installs">Очередь установок</string>
+    <string name="ut_linux_status">Система Linux</string>
+    <string name="ut_ready">Контейнер готов к запуску</string>
+    <string name="ut_running">активных сессий</string>
+    <string name="ut_manage_linux">Управлять Linux</string>
+    <string name="ut_setup_linux">Настроить Linux</string>
+    <string name="ut_quick_actions">Быстрые действия</string>
+    <string name="ut_terminal">Терминал</string>
+</resources>

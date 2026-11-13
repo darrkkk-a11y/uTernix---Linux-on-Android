@@ -1,0 +1,179 @@
+# Copyright (C) 2026 Daryan Kamaran Karim
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Runs as root inside a fresh mount namespace (and network namespace when network is denied),
+# started by ChrootBackend via:  su -c 'export ...; exec unshare -m [-n] sh enter.sh'
+#
+# Inputs (env): R, BINDS, DEVICES, USB_ALL, GPU_DEVICE, X11_DIR, RUN_AS_ROOT, APP_UID, NET_GROUPS, GUEST_ENV, CMD, DNS
+# Derived from termux-linux-layer/linux. Mounts made here vanish with the namespace; never
+# mount or unmount in the global namespace, Android's mounts are shared and changes propagate.
+set -e
+
+for bb in /data/adb/magisk/busybox /data/adb/ksu/bin/busybox /data/adb/ap/bin/busybox; do
+  if [ -x "$bb" ]; then break; fi
+done
+[ -x "$bb" ] || { echo "busybox from Magisk/KernelSU/APatch not found" >&2; exit 1; }
+# Every tool from busybox, never the phone's: some phones' root shell reaches none of toybox's
+# (no unshare, tr or touch on a Galaxy Z Fold5 with KernelSU, #5).
+for c in mount touch mkdir ln rm sed grep head cat chmod chown stat dirname find ls sort tr chroot printf sleep; do
+  eval "$c() { \"\$bb\" $c \"\$@\"; }"
+done
+# Shares host path $1 at $2 with what's mounted inside it (rbind: the phone's / alone is
+# Android's read-only root, its /data and /storage empty), read-only when $3 is ro.
+share() {
+  mount -o rbind "$1" "$2"
+  [ "$3" = ro ] || return 0
+  # Read-only all the way down in one go: ro=recursive (mount_setattr, Linux 5.12+), from the
+  # container's util-linux. Not one remount per mount: busybox crashes on stacked mounts, and
+  # toybox's reaches the filesystem itself, turning Android's own copy read-only too.
+  # Without it, the folder alone, read-only, as before.
+  if ! chroot "$R" /usr/bin/mount -o remount,bind,ro=recursive "${2#"$R"}" 2>/dev/null; then
+    "$bb" umount -l "$2"; mount --bind "$1" "$2"; mount -o remount,bind,ro "$2"
+  fi
+}
+mount --make-rprivate /
+
+[ -d "$R/usr" ] || { echo "rootfs not found at $R" >&2; exit 1; }
+
+mount -t proc proc "$R/proc"
+mount -t sysfs -o ro sys "$R/sys"
+
+# Minimal /dev: only the basics plus what the manifest grants. No rbind of the host /dev.
+mount -t tmpfs -o mode=755,nosuid tmpfs "$R/dev"
+for n in null zero full random urandom tty; do
+  touch "$R/dev/$n"; mount --bind "/dev/$n" "$R/dev/$n"
+done
+mkdir -p "$R/dev/pts" "$R/dev/shm"
+mount -t devpts -o newinstance,ptmxmode=0666,mode=620 devpts "$R/dev/pts"
+ln -sf pts/ptmx "$R/dev/ptmx"
+mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs "$R/dev/shm"
+ln -sf /proc/self/fd "$R/dev/fd"
+
+mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs "$R/tmp"
+mount -t tmpfs -o mode=755,nosuid,nodev tmpfs "$R/run"
+# LLVM (llvmpipe's shader JIT) picks instructions by core model, not by what the kernel enables:
+# Cortex-X3 and A715 have SVE, Android kernels leave it off, and OpenGL apps drawing in software
+# died of SIGILL. Every core is named a Cortex-A78 (as FakeProc does for PRoot) unless SVE is on.
+if ! grep '^Features' /proc/cpuinfo | grep -qw sve; then
+  sed 's/^\(CPU part[[:space:]]*:[[:space:]]*\).*/\10xd41/' /proc/cpuinfo > "$R/run/.cpuinfo"
+  mount --bind "$R/run/.cpuinfo" "$R/proc/cpuinfo"
+  # Shaders compiled before that are in Mesa's disk cache, which doesn't key them by core.
+  for c in "$R/root/.cache" "$R/home/user/.cache"; do
+    if [ -d "$c" ] && [ ! -e "$c/.tessera-no-sve" ]; then
+      rm -rf "$c/mesa_shader_cache" "$c/mesa_shader_cache_db"; touch "$c/.tessera-no-sve"
+    fi
+  done
+fi
+
+printf '%s\n' "$DEVICES" | while IFS= read -r d; do
+  [ -n "$d" ] && [ -e "$d" ] || continue
+  mkdir -p "$R$(dirname "$d")"; touch "$R$d"; mount --bind "$d" "$R$d"
+done
+
+# All USB devices (USB_ALL=1): the whole folder, bound live, so devices that arrive later show
+# up too, such as a phone rebooting into fastboot or EDL under a new number. USB serial ports
+# (ttyACM) live in /dev itself and can't be followed, so those present now come along.
+if [ "$USB_ALL" = 1 ] && [ -d /dev/bus/usb ]; then
+  mkdir -p "$R/dev/bus/usb"; mount --bind /dev/bus/usb "$R/dev/bus/usb"
+  for t in /dev/ttyACM*; do
+    [ -e "$t" ] || continue
+    touch "$R$t"; mount --bind "$t" "$R$t"
+  done
+fi
+
+# The GPU for hardware graphics. Unlike DEVICES, its group isn't added below: it's world-usable,
+# and its group is Android's "system".
+if [ -n "$GPU_DEVICE" ] && [ -e "$GPU_DEVICE" ]; then
+  touch "$R$GPU_DEVICE"; mount --bind "$GPU_DEVICE" "$R$GPU_DEVICE"
+fi
+
+printf '%s\n' "$BINDS" | while IFS=: read -r src dst mode; do
+  [ -n "$src" ] && [ -e "$src" ] || continue
+  if [ -d "$src" ]; then mkdir -p "$R$dst"; else mkdir -p "$R$(dirname "$dst")"; touch "$R$dst"; fi
+  share "$src" "$R$dst" "$mode"
+done
+
+if [ -n "$X11_DIR" ]; then
+  mkdir -p "$R/tmp/.X11-unix"; mount --bind "$X11_DIR" "$R/tmp/.X11-unix"
+fi
+
+# Android's DNS servers ($DNS, from HostDns), while resolv.conf is automatic: its first line is
+# HostDns's marker, it's what earlier versions always wrote, or it's missing or a symlink.
+# Saved from the config editor, it's the user's and stays as it is.
+resolv="$R/etc/resolv.conf"
+if [ -n "$DNS" ]; then
+  first=$(head -n 1 "$resolv" 2>/dev/null || true)
+  # Empty counts too: it names no server, and a write that failed left one (#5, #7).
+  if [ -L "$resolv" ] || [ ! -s "$resolv" ] || [ "${first#\# Kept to Android}" != "$first" ] \
+    || [ "$(cat "$resolv")" = "$(printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8')" ]; then
+    rm -f "$resolv"; printf '%s' "$DNS" > "$resolv"; chmod 644 "$resolv"
+  fi
+fi
+
+# apt empties the terminal's input with a non-blocking read before it starts dpkg. Through
+# KernelSU's su (SukiSU, at least) the terminal ignores non-blocking mode, so that read waits for
+# a key nobody presses and every install stopped after downloading, dpkg never started.
+conf="$R/etc/apt/apt.conf.d/99tessera-no-flush-stdin"
+if [ -d "${conf%/*}" ] && [ ! -e "$conf" ]; then
+  printf 'DPkg::FlushSTDIN "false";\n' > "$conf"
+fi
+
+# GUEST_ENV is one KEY=VALUE per line; turn it into positional args for env -i.
+set --
+while IFS= read -r kv; do [ -n "$kv" ] && set -- "$@" "$kv"; done <<ENVEOF
+$GUEST_ENV
+ENVEOF
+
+# su hands us the terminal without making it our controlling tty, so bash would run without
+# job control (no Ctrl+C/Ctrl+Z). setsid -c starts a session that owns the terminal. --wait:
+# when we already lead a process group setsid forks, and without it the parent exits at once;
+# su then returns, the launcher takes the app for finished and closes its X server while the
+# app runs on, orphaned ("Can't open display" for every GUI app in chroot mode).
+# Without a terminal (the Files tab's shell talks over pipes) there's nothing to own, and
+# --ctty would fail.
+SETSID=
+CTTY=
+[ -t 0 ] && CTTY=--ctty
+[ -x "$R/usr/bin/setsid" ] && SETSID="/usr/bin/setsid $CTTY --wait"
+# Start in $HOME; expanded by the guest shell, not this one.
+START='cd "$HOME" 2>/dev/null; exec '
+
+if [ "$RUN_AS_ROOT" = 1 ]; then
+  exec "$bb" chroot "$R" $SETSID /usr/bin/env -i "$@" /bin/sh -c "$START$CMD"
+fi
+# Apps run as the launcher app's own uid (APP_UID), not Debian's usual 1000: on Android, 1000 is
+# "system", which system services trust. The app's uid carries no rights beyond the app's, and
+# is what PRoot apps run as too.
+U=${APP_UID:?APP_UID not set}
+mkdir -p "$R/home/user"
+# Homes made by earlier versions belong to 1000; hand them over once.
+[ "$(stat -c %u "$R/home/user")" = "$U" ] || chown -R "$U:$U" "$R/home/user"
+# Give the uid a name. Without one, D-Bus won't start ("Could not get password database
+# information for UID of current process") and other programs complain.
+if grep -q '^user:' "$R/etc/passwd"; then
+  sed -i "s#^user:[^:]*:[0-9]*:[0-9]*:#user:x:$U:$U:#" "$R/etc/passwd"
+else
+  echo "user:x:$U:$U:Tessera user:/home/user:/bin/bash" >> "$R/etc/passwd"
+fi
+if grep -q '^user:' "$R/etc/group"; then
+  sed -i "s#^user:[^:]*:[0-9]*:#user:x:$U:#" "$R/etc/group"
+else
+  echo "user:x:$U:" >> "$R/etc/group"
+fi
+[ ! -f "$R/etc/shadow" ] || grep -q '^user:' "$R/etc/shadow" || echo 'user:!:19000::::::' >> "$R/etc/shadow"
+# Supplementary groups: Android's network groups when network is granted, and the group of
+# each granted device (USB nodes belong to root:usb, 0660), so the app can open just those.
+GROUPS_LIST=$NET_GROUPS
+DEV_GROUPS=$({
+  printf '%s\n' "$DEVICES"
+  # With all USB devices, their group too (usb); not "system" (1000), which owns nodes
+  # Android itself opened and which system services trust.
+  if [ "$USB_ALL" = 1 ]; then find /dev/bus/usb -type c 2>/dev/null; ls /dev/ttyACM* 2>/dev/null; fi
+} | while IFS= read -r d; do
+  [ -n "$d" ] && [ -e "$d" ] && stat -c %g "$d"
+done | grep -vx 1000 | sort -u | tr '\n' ',' | sed 's/,$//')
+[ -n "$DEV_GROUPS" ] && GROUPS_LIST=${GROUPS_LIST:+$GROUPS_LIST,}$DEV_GROUPS
+if [ -n "$GROUPS_LIST" ]; then GROUP_ARG="--groups=$GROUPS_LIST"; else GROUP_ARG=--clear-groups; fi
+# setpriv is in util-linux (essential on Debian). --no-new-privs keeps setuid binaries inert.
+exec "$bb" chroot "$R" $SETSID /usr/bin/setpriv --reuid="$U" --regid="$U" \
+  "$GROUP_ARG" --no-new-privs --inh-caps=-all \
+  /usr/bin/env -i "$@" /bin/sh -c "$START$CMD"
