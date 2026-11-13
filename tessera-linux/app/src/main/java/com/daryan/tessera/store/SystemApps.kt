@@ -97,7 +97,9 @@ class SystemApps {
         /** Starts each file in what [scanAsRoot]'s scripts print; no desktop file has a line like it. */
         private const val MARK = "@@launcher@@ "
         private const val APPLICATIONS = "/usr/share/applications"
-        private val ICON_SIZES = listOf("256x256", "128x128", "96x96", "64x64", "48x48")
+        private val ICON_SIZES = listOf("512x512", "256x256", "128x128", "96x96", "64x64", "48x48", "scalable")
+        private val ICON_THEMES = listOf("hicolor", "Adwaita", "breeze", "Yaru", "Papirus", "gnome", "HighContrast")
+        private val ICON_EXTENSIONS = listOf("png", "svg", "xpm")
 
         fun isSystemApp(app: PermissionManifest) = app.id.startsWith(ID_PREFIX)
 
@@ -134,15 +136,35 @@ class SystemApps {
         /** A PNG for [icon] (a theme name or a path) inside [rootfs], as a host path. */
         fun iconFile(rootfs: File, icon: String?): String? {
             if (icon.isNullOrBlank()) return null
-            if (icon.startsWith("/")) return File(rootfs, icon.removePrefix("/")).takeIf { it.isFile && icon.endsWith(".png") }?.path
-            return iconCandidates(icon).map { File(rootfs, it) }.firstOrNull { it.isFile }?.path
+            val root = runCatching { rootfs.canonicalPath + File.separator }.getOrNull() ?: return null
+            return iconCandidates(icon).asSequence()
+                .map { File(rootfs, it) }
+                .firstOrNull { candidate ->
+                    runCatching {
+                        candidate.isFile && candidate.canonicalPath.startsWith(root) && candidate.length() in 1..1_500_000
+                    }.getOrDefault(false)
+                }?.path
         }
 
-        /** Where a themed icon named [icon] may be, relative to the root, best first. */
+        /** Lookup themed Linux application icons in installed PNG, SVG and XPM assets. */
         private fun iconCandidates(icon: String): List<String> {
-            if (icon.startsWith("/")) return if (icon.endsWith(".png")) listOf(icon.removePrefix("/")) else emptyList()
-            val name = icon.removeSuffix(".png")
-            return ICON_SIZES.map { "usr/share/icons/hicolor/$it/apps/$name.png" } + "usr/share/pixmaps/$name.png"
+            val raw = icon.trim()
+            if (raw.isEmpty() || raw.any { it.code == 0 } || raw.contains('\n')) return emptyList()
+            if (raw.startsWith("/")) return listOf(raw.removePrefix("/"))
+            // Desktop themes use bare names; never let an Icon= value traverse the rootfs.
+            if (raw.contains('/') || raw.contains("..") || raw.contains(92.toChar())) return emptyList()
+            val base = ICON_EXTENSIONS.firstOrNull { raw.endsWith(".$it", ignoreCase = true) }
+                ?.let { raw.dropLast(it.length + 1) } ?: raw
+            return buildList {
+                for (size in ICON_SIZES) for (theme in ICON_THEMES) for (ext in ICON_EXTENSIONS) {
+                    add("usr/share/icons/$theme/$size/apps/$base.$ext")
+                }
+                for (ext in ICON_EXTENSIONS) {
+                    add("usr/share/pixmaps/$base.$ext")
+                    add("usr/local/share/pixmaps/$base.$ext")
+                    add("usr/local/share/icons/hicolor/scalable/apps/$base.$ext")
+                }
+            }
         }
 
         /** Splits output of the scripts above into (name after [MARK], following lines). */

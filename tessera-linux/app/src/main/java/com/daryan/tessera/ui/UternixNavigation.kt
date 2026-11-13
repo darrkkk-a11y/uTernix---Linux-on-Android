@@ -3,6 +3,11 @@ package com.daryan.tessera.ui
 import com.daryan.tessera.R
 import com.daryan.tessera.ui.deb.UColors
 import androidx.compose.foundation.Image
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
@@ -33,10 +38,13 @@ private fun Destination.labelRes():Int = when(this){
 
 @Composable private fun NavEntry(destination:Destination,selected:Boolean,compact:Boolean,badge:@Composable ()->Unit,onClick:()->Unit){
  val label=stringResource(destination.labelRes())
- val color=if(selected) UColors.Accent else UColors.Muted
- val bg=if(selected) UColors.Raised else Color.Transparent
+ val color by animateColorAsState(if(selected) UColors.Accent else UColors.Muted, label = "Navigation label")
+ val scale by animateFloatAsState(if(selected) 1f else 0.94f, label = "Navigation icon")
+ val bg=Brush.horizontalGradient(
+  if(selected) listOf(UColors.Accent.copy(alpha=0.21f),UColors.System.copy(alpha=0.12f))
+  else listOf(Color.Transparent,Color.Transparent))
  if(compact){
-  Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
+  Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg).graphicsLayer { scaleX=scale; scaleY=scale }
     .selectable(selected=selected,onClick=onClick,role=Role.Tab)
     .padding(vertical=7.dp), horizontalAlignment=Alignment.CenterHorizontally){
     BadgedBox(badge={badge()}){Image(painterResource(destination.icon.vector),label,Modifier.size(27.dp))}
@@ -44,7 +52,7 @@ private fun Destination.labelRes():Int = when(this){
     Text(label,style=MaterialTheme.typography.labelSmall,color=color,maxLines=1,overflow=TextOverflow.Ellipsis)
   }
  }else{
-  Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
+  Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg).graphicsLayer { scaleX=scale; scaleY=scale }
    .selectable(selected=selected,onClick=onClick,role=Role.Tab).padding(horizontal=16.dp, vertical=14.dp),
    verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
    BadgedBox(badge={badge()}){Image(painterResource(destination.icon.vector),label,Modifier.size(28.dp))}
@@ -55,7 +63,9 @@ private fun Destination.labelRes():Int = when(this){
 
 /** Phone portrait navigation. No floating glass, no duplicated upper tabs. */
 @Composable fun FloatingDock(selected:Destination,onSelect:(Destination)->Unit,badge:@Composable (Destination)->Unit){
- Row(Modifier.fillMaxWidth().background(UColors.Surface).navigationBarsPadding()
+ Row(Modifier.fillMaxWidth().background(
+   Brush.horizontalGradient(listOf(UColors.Surface,UColors.Raised,UColors.Surface))
+ ).navigationBarsPadding()
    .padding(horizontal=6.dp,vertical=8.dp).selectableGroup(),
    verticalAlignment=Alignment.CenterVertically){
   Destination.entries.forEach{ d ->
@@ -67,7 +77,9 @@ private fun Destination.labelRes():Int = when(this){
 /** Landscape / tablet: permanent rail. For short phone landscape, all items scroll. */
 @Composable fun UternixRail(selected:Destination,onSelect:(Destination)->Unit,badge:@Composable (Destination)->Unit){
  val compact=androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 840
- Column(Modifier.fillMaxHeight().width(if(compact) 88.dp else 208.dp).background(UColors.Surface)
+ Column(Modifier.fillMaxHeight().width(if(compact) 88.dp else 208.dp).background(
+   Brush.verticalGradient(listOf(UColors.Raised,UColors.Surface,UColors.Surface))
+ )
    .padding(horizontal=if(compact) 8.dp else 12.dp, vertical=12.dp)){
   if(!compact){
    Text("uTernix",Modifier.padding(start=14.dp,top=6.dp,bottom=20.dp),

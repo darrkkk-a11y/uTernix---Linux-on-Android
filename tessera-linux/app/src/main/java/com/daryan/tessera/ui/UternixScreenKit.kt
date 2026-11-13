@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,9 +32,15 @@ fun UternixContent(modifier: Modifier = Modifier, content: @Composable ColumnSco
 
 @Composable
 fun UternixPanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
-        color = UColors.Surface, border = BorderStroke(1.dp, UColors.Border)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    val shape = RoundedCornerShape(19.dp)
+    Surface(modifier = modifier.fillMaxWidth().shadow(8.dp, shape), shape = shape,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, Brush.linearGradient(
+            listOf(UColors.Info.copy(alpha = 0.34f), UColors.Border, UColors.System.copy(alpha = 0.28f))
+        ))) {
+        Column(Modifier.background(Brush.linearGradient(
+            listOf(UColors.Raised, UColors.Surface, UColors.Surface)
+        )).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
 }
 

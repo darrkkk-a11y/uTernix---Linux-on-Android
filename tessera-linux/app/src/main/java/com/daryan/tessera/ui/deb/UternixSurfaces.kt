@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -22,22 +24,67 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-fun utBorderBrush(stops: List<Color>, alpha:Float=1f):Brush=androidx.compose.ui.graphics.SolidColor(UColors.Border.copy(alpha=alpha))
-fun Modifier.utOutline(shape:Shape,width:Dp=1.dp,alpha:Float=1f):Modifier=border(width,UColors.Border.copy(alpha=alpha),shape)
-fun Modifier.utSurface(shape:Shape,raised:Boolean=false):Modifier=composed {
- background(if(raised) UColors.Raised else UColors.Surface,shape).border(1.dp,UColors.Border,shape)
+fun utBorderBrush(stops: List<Color>, alpha: Float = 1f): Brush =
+    Brush.linearGradient(
+        stops.ifEmpty { listOf(UColors.Accent, UColors.Border, UColors.System) }
+            .map { it.copy(alpha = alpha) }
+    )
+
+fun Modifier.utOutline(shape: Shape, width: Dp = 1.dp, alpha: Float = 1f): Modifier =
+    border(width = width, brush = utBorderBrush(
+        listOf(UColors.Info.copy(alpha = 0.55f), UColors.Border, UColors.System.copy(alpha = 0.5f)), alpha
+    ), shape = shape)
+
+fun Modifier.utSurface(shape: Shape, raised: Boolean = false): Modifier = composed {
+    val base = if (raised) UColors.Raised else UColors.Surface
+    shadow(if (raised) 10.dp else 5.dp, shape)
+        .background(
+            Brush.linearGradient(
+                listOf(UColors.Accent.copy(alpha = 0.1f).compositeOver(base), base, UColors.Raised)
+            ), shape
+        )
+        .utOutline(shape)
 }
-@Composable fun UtCard(modifier:Modifier=Modifier,shape:Shape=MaterialTheme.shapes.large,
-  raised:Boolean=false,onClick:(()->Unit)?=null,content:@Composable ColumnScope.()->Unit){
- val col=if(raised) UColors.Raised else UColors.Surface
- if(onClick!=null) Surface(onClick=onClick,modifier=modifier,shape=shape,color=col,
-     border=BorderStroke(1.dp,UColors.Border)){ Column(content=content) }
- else Surface(modifier=modifier,shape=shape,color=col,
-     border=BorderStroke(1.dp,UColors.Border)){ Column(content=content) }
+
+@Composable
+fun UtCard(
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.large,
+    raised: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val base = if (raised) UColors.Raised else UColors.Surface
+    val inner: @Composable () -> Unit = {
+        Column(
+            Modifier.background(
+                Brush.linearGradient(
+                    listOf(UColors.Info.copy(alpha = 0.07f).compositeOver(base), base, UColors.Raised)
+                )
+            ),
+            content = content,
+        )
+    }
+    if (onClick != null) Surface(
+        onClick = onClick, modifier = modifier.shadow(8.dp, shape), shape = shape,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, utBorderBrush(listOf(UColors.Accent.copy(alpha = 0.40f), UColors.Border, UColors.System.copy(alpha = 0.24f)))),
+        content = inner,
+    ) else Surface(
+        modifier = modifier.shadow(8.dp, shape), shape = shape,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, utBorderBrush(listOf(UColors.Accent.copy(alpha = 0.40f), UColors.Border, UColors.System.copy(alpha = 0.24f)))),
+        content = inner,
+    )
 }
-@Composable fun UtBackdrop(modifier:Modifier=Modifier,content:@Composable BoxScope.()->Unit){
- Box(modifier.background(UColors.Background)) { CompositionLocalProvider(
-   LocalContentColor provides UColors.Text){content()} }
+
+@Composable
+fun UtBackdrop(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+    Box(
+        modifier.background(Brush.verticalGradient(listOf(UColors.Background, Color(0xFF101A30), UColors.Background)))
+    ) {
+        CompositionLocalProvider(LocalContentColor provides UColors.Text) { content() }
+    }
 }
 @Composable fun DebIconImage(icon:DebIcon,modifier:Modifier=Modifier,size:Dp=24.dp,
  contentDescription:String?=null,vector:Boolean=true,alpha:Float=1f,tint:Color?=null){

@@ -4,6 +4,10 @@
 package com.daryan.tessera.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -66,7 +70,9 @@ fun AppsPager(
     val apps = remember(tab?.apps, search) { searchApps(tab?.apps.orEmpty(), search) }
     val visibleWidgets = remember(tab?.title, layout.widgets) { layout.widgets.filter { it.tab == tab?.title } }
 
-    Column(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
+    Column(Modifier.fillMaxSize()
+        .background(Brush.verticalGradient(listOf(UColors.Background, Color(0xFF121E37), UColors.Background)))
+        .padding(top = padding.calculateTopPadding())) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -76,7 +82,9 @@ fun AppsPager(
             }
             Box {
                 IconButton(onClick = { menu = true }) {
-                    Text("⋮", style = MaterialTheme.typography.headlineMedium, color = UColors.Text)
+                    Icon(painterResource(R.drawable.ut_more_outline_text),
+                        contentDescription = stringResource(R.string.ut3_app_actions),
+                        modifier = Modifier.size(24.dp), tint = UColors.Muted)
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text(if(editing) stringResource(R.string.ut2_library_done) else stringResource(R.string.ut2_library_arrange)) },
@@ -90,7 +98,15 @@ fun AppsPager(
             value = search, onValueChange = { search = it },
             placeholder = { Text(stringResource(R.string.ut2_library_search)) },
             singleLine = true,
-            leadingIcon = { Text("⌕", style = MaterialTheme.typography.titleLarge) },
+            leadingIcon = { Icon(painterResource(R.drawable.ut_search_outline_text),
+                contentDescription = null, modifier = Modifier.size(22.dp), tint = UColors.Info) },
+            trailingIcon = {
+                if (search.isNotEmpty()) IconButton(onClick = { search = "" }) {
+                    Icon(painterResource(R.drawable.ut_close_outline_text),
+                        contentDescription = stringResource(R.string.ut3_clear_search),
+                        modifier = Modifier.size(20.dp), tint = UColors.Muted)
+                }
+            },
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
@@ -122,7 +138,7 @@ fun AppsPager(
                 PaddingValues(bottom = padding.calculateBottomPadding()))
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 158.dp),
+                columns = GridCells.Adaptive(minSize = 144.dp),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp,
                     bottom = padding.calculateBottomPadding() + 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -174,36 +190,87 @@ private fun UternixInstalledApp(
     onHide: () -> Unit, onIconColor: () -> Unit, onMove: (Int) -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
-    Surface(onClick = onOpen, shape = RoundedCornerShape(18.dp), color = UColors.Surface,
-        border = BorderStroke(1.dp, UColors.Border), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top) {
-                AppGlyph(app, size = 52.dp)
+    val tone = when (app.category.lowercase()) {
+        "internet", "network" -> UColors.Info
+        "graphics", "audio", "video", "multimedia" -> UColors.Rose
+        "development" -> UColors.System
+        "system" -> UColors.Success
+        "office" -> UColors.Package
+        else -> UColors.Accent
+    }
+    UtKineticTile(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 178.dp),
+        accent = tone,
+        onClick = onOpen,
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                AppGlyph(app, size = 74.dp)
                 Box {
-                    IconButton(onClick = { menu = true }, modifier = Modifier.size(40.dp)) {
-                        Text("⋮", style = MaterialTheme.typography.titleLarge, color = UColors.Muted)
+                    IconButton(
+                        onClick = { menu = true },
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ut_more_outline_text),
+                            contentDescription = stringResource(R.string.ut3_app_actions),
+                            tint = UColors.Muted,
+                            modifier = Modifier.size(23.dp),
+                        )
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        UternixMenuCommand(stringResource(if (favorite) R.string.ut2_library_unfavorite else R.string.ut2_library_favorite)) { menu = false; onFavorite() }
-                        UternixMenuCommand(stringResource(if (pinned) R.string.ut2_library_unpin else R.string.ut2_library_pin)) { menu = false; onPin() }
-                        UternixMenuCommand(stringResource(R.string.ut2_library_edit)) { menu = false; onEditExec() }
-                        if (onGraphics != null) UternixMenuCommand(stringResource(R.string.ut2_library_graphics)) { menu = false; onGraphics() }
-                        UternixMenuCommand(stringResource(R.string.ut2_library_icon)) { menu = false; onIconColor() }
-                        UternixMenuCommand(stringResource(R.string.ut2_library_hide)) { menu = false; onHide() }
-                        UternixMenuCommand(stringResource(R.string.ut2_library_uninstall)) { menu = false; onRemove() }
+                        UternixMenuCommand(stringResource(if (favorite) R.string.ut2_library_unfavorite else R.string.ut2_library_favorite)) {
+                            menu = false; onFavorite()
+                        }
+                        UternixMenuCommand(stringResource(if (pinned) R.string.ut2_library_unpin else R.string.ut2_library_pin)) {
+                            menu = false; onPin()
+                        }
+                        UternixMenuCommand(stringResource(R.string.ut2_library_edit)) {
+                            menu = false; onEditExec()
+                        }
+                        if (onGraphics != null) UternixMenuCommand(stringResource(R.string.ut2_library_graphics)) {
+                            menu = false; onGraphics()
+                        }
+                        UternixMenuCommand(stringResource(R.string.ut2_library_icon)) {
+                            menu = false; onIconColor()
+                        }
+                        UternixMenuCommand(stringResource(R.string.ut2_library_hide)) {
+                            menu = false; onHide()
+                        }
+                        UternixMenuCommand(stringResource(R.string.ut2_library_uninstall)) {
+                            menu = false; onRemove()
+                        }
                     }
                 }
             }
-            Text(app.name, style = MaterialTheme.typography.titleMedium, color = UColors.Text,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(if (app.category.isBlank()) stringResource(R.string.ut2_library_category_fallback) else app.category,
-                style = MaterialTheme.typography.bodySmall, color = UColors.Muted,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if(editing) {
+            Text(
+                app.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = UColors.Text,
+                maxLines = 2, overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                if (app.category.isBlank()) stringResource(R.string.ut2_library_category_fallback)
+                else app.category,
+                style = MaterialTheme.typography.bodySmall,
+                color = tone,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            if (editing) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedButton(onClick = { onMove(-1) }, modifier = Modifier.weight(1f)) { Text("←") }
-                    OutlinedButton(onClick = { onMove(1) }, modifier = Modifier.weight(1f)) { Text("→") }
+                    OutlinedButton(onClick = { onMove(-1) }, modifier = Modifier.weight(1f)) {
+                        Text("←")
+                    }
+                    OutlinedButton(onClick = { onMove(1) }, modifier = Modifier.weight(1f)) {
+                        Text("→")
+                    }
                 }
             }
         }

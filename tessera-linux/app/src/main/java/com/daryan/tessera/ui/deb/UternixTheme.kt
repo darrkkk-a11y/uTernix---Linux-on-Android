@@ -1,5 +1,5 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
-// uTernix — Spectrum: semantic accent colors on solid matte navy surfaces.
+// uTernix — Chromatic Motion: atmospheric depth, vivid accents, restrained motion.
 package com.daryan.tessera.ui.deb
 
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,20 +15,23 @@ import androidx.compose.ui.unit.sp
 import com.daryan.tessera.R
 
 object UColors {
-    val Background=Color(0xFF0D1017)
-    val Surface=Color(0xFF171C26)
-    val Raised=Color(0xFF202633)
-    val Pressed=Color(0xFF28303F)
-    val Border=Color(0xFF313946)
-    val Text=Color(0xFFF3F3F1)
-    val Muted=Color(0xFFA8B0BE)
-    val Subtle=Color(0xFF778391)
-    val Accent=Color(0xFFDAF475)
-    val Success=Color(0xFF80DAB0)
-    val Info=Color(0xFF8FC8F7)
-    val Package=Color(0xFFF9B982)
-    val System=Color(0xFFC3AFF9)
-    val Danger=Color(0xFFFF9399)
+    val Background=Color(0xFF080D1B)
+    val Surface=Color(0xFF151E31)
+    val Raised=Color(0xFF1E2C45)
+    val Pressed=Color(0xFF2A3B56)
+    val Border=Color(0xFF3C5272)
+    val Text=Color(0xFFF8FAFF)
+    val Muted=Color(0xFFB8C6DB)
+    val Subtle=Color(0xFF879BB8)
+    val Accent=Color(0xFF91B2FF)
+    val Success=Color(0xFF76E8B9)
+    val Info=Color(0xFF66D9F4)
+    val Package=Color(0xFFFFB578)
+    val System=Color(0xFFCAABFF)
+    val Danger=Color(0xFFFF849F)
+    val Rose=Color(0xFFFF91D2)
+    val Gold=Color(0xFFFFD48D)
+    val Glow=Color(0xFF8A7EFF)
 }
 val Onest = FontFamily(
   Font(R.font.onest_regular,FontWeight.Normal), Font(R.font.onest_medium,FontWeight.Medium),
@@ -47,17 +50,17 @@ val UShapes=Shapes(
  medium=RoundedCornerShape(15.dp),large=RoundedCornerShape(20.dp),extraLarge=RoundedCornerShape(24.dp)
 )
 private val UScheme=darkColorScheme(
- primary=UColors.Accent,onPrimary=Color(0xFF171D10),primaryContainer=Color(0xFF303B29),onPrimaryContainer=UColors.Accent,
- secondary=UColors.Info,onSecondary=UColors.Background,secondaryContainer=Color(0xFF263748),onSecondaryContainer=UColors.Info,
- tertiary=UColors.System,onTertiary=UColors.Background,tertiaryContainer=Color(0xFF39304B),onTertiaryContainer=UColors.System,
- error=UColors.Danger,onError=UColors.Background,errorContainer=Color(0xFF483036),onErrorContainer=UColors.Danger,
+ primary=UColors.Accent,onPrimary=Color(0xFF0B1630),primaryContainer=Color(0xFF293F6F),onPrimaryContainer=UColors.Accent,
+ secondary=UColors.Info,onSecondary=UColors.Background,secondaryContainer=Color(0xFF204A60),onSecondaryContainer=UColors.Info,
+ tertiary=UColors.System,onTertiary=UColors.Background,tertiaryContainer=Color(0xFF49366A),onTertiaryContainer=UColors.System,
+ error=UColors.Danger,onError=UColors.Background,errorContainer=Color(0xFF5B2E46),onErrorContainer=UColors.Danger,
  background=UColors.Background,onBackground=UColors.Text,surface=UColors.Surface,onSurface=UColors.Text,
  surfaceVariant=UColors.Raised,onSurfaceVariant=UColors.Muted,surfaceTint=UColors.Accent,
  outline=UColors.Border,outlineVariant=UColors.Border,scrim=Color.Black,
  surfaceDim=UColors.Background,surfaceBright=UColors.Raised,surfaceContainerLowest=UColors.Background,
  surfaceContainerLow=UColors.Surface,surfaceContainer=UColors.Surface,
  surfaceContainerHigh=UColors.Raised,surfaceContainerHighest=UColors.Pressed,
- inverseSurface=UColors.Text,inverseOnSurface=UColors.Background,inversePrimary=Color(0xFF607F16)
+ inverseSurface=UColors.Text,inverseOnSurface=UColors.Background,inversePrimary=Color(0xFF496FC8)
 )
 
 /** Compatibility values for feature modules. All surfaces are SOLID; no glass, glows or gradient rims. */
