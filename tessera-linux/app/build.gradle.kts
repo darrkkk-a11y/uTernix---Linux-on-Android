@@ -30,7 +30,7 @@ val releaseKey: Map<String, String>? = run {
 
 android {
     namespace = "com.daryan.tessera"
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = "29.0.14206865"
 
     defaultConfig {

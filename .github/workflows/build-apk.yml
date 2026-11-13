@@ -94,7 +94,16 @@ jobs:
         run: |
           set -euo pipefail
           yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.14206865' 'cmake;3.22.1'
+          # Android 17 is published as android-37.0 (not android-37).
+          sdkmanager --channel=3 --install 'platforms;android-37.0' 'build-tools;37.0.0' 'ndk;29.0.14206865' 'cmake;3.22.1'
+          test -s "$ANDROID_HOME/platforms/android-37.0/android.jar" || {
+            echo "::error::Android 37.0 platform could not be installed"
+            exit 1
+          }
+          # AGP 9.4 may look for the integer platform hash android-37.
+          if [[ ! -e "$ANDROID_HOME/platforms/android-37" ]]; then
+            ln -s android-37.0 "$ANDROID_HOME/platforms/android-37"
+          fi
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu cmake ninja-build python3
 
