@@ -3,6 +3,12 @@ name: Build and release uTernix
 on:
   push:
     branches: [main]
+    paths:
+      - 'tessera-linux/**'
+      - 'deb-launcher/**'
+      - 'box64-source/**'
+      - 'build-tools-local/**'
+      - 'tools/design/**'
   workflow_dispatch:
 
 permissions:
